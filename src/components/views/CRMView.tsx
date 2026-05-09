@@ -4,7 +4,9 @@ import {
   DragOverlay, 
   closestCorners, 
   KeyboardSensor, 
-  PointerSensor, 
+  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useSensor, 
   useSensors,
   useDroppable
@@ -59,7 +61,8 @@ export function CRMView() {
   };
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
+    useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
@@ -250,7 +253,7 @@ function KanbanCard({ card, isOverlay = false, onDelete }: any) {
         </span>
         {card.phone ? (
           <a
-            href={`https://wa.me/55${card.phone.replace(/\\D/g, '')}`}
+            href={`https://wa.me/55${card.phone.replace(/\D/g, '')}`}
             target="_blank"
             rel="noopener noreferrer"
             onPointerDown={(e) => e.stopPropagation()}
@@ -285,7 +288,7 @@ function SortableCard({ card, onDelete }: any) {
   };
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="outline-none touch-none">
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="outline-none touch-manipulation">
       <KanbanCard card={card} onDelete={onDelete} />
     </div>
   );

@@ -1,6 +1,13 @@
 import { CheckCircle2, Zap, Rocket } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
 
 export function PlansView() {
+  const { user } = useAuth();
+  
+  // Substitua pelos seus links reais de checkout do Stripe ou Mercado Pago
+  const checkoutUrlPlus = "https://buy.stripe.com/test_plus_link_aqui";
+  const checkoutUrlPremium = "https://buy.stripe.com/test_premium_link_aqui";
+
   return (
     <div className="flex flex-col items-center justify-center py-12 max-w-6xl mx-auto w-full">
       <div className="text-center mb-16">
@@ -56,9 +63,14 @@ export function PlansView() {
             <FeatureItem text="Integração WhatsApp Web" active />
           </ul>
           
-          <button className="w-full py-3 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 text-white font-medium transition-colors">
+          <a 
+            href={`${checkoutUrlPlus}?client_reference_id=${user?.id}&prefilled_email=${user?.email}`}
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-center block w-full py-3 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 text-white font-medium transition-colors"
+          >
             Fazer Upgrade
-          </button>
+          </a>
         </div>
 
         {/* Pro Tier */}
@@ -89,9 +101,14 @@ export function PlansView() {
             <FeatureItem text="Acesso à API & Automações" active />
           </ul>
           
-          <button className="w-full py-3.5 rounded-xl bg-gradient-to-r from-orus-gold to-orus-amber hover:brightness-110 text-black font-semibold shadow-[0_0_20px_rgba(201,176,118,0.4)] transition-all relative z-10">
+          <a 
+            href={`${checkoutUrlPremium}?client_reference_id=${user?.id}&prefilled_email=${user?.email}`}
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-center block w-full py-3.5 rounded-xl bg-gradient-to-r from-orus-gold to-orus-amber hover:brightness-110 text-black font-semibold shadow-[0_0_20px_rgba(201,176,118,0.4)] transition-all relative z-10"
+          >
             Fazer Upgrade Agora
-          </button>
+          </a>
         </div>
       </div>
     </div>
