@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, MapPin, Briefcase, Globe, Phone, Download, Filter } from 'lucide-react';
+import { Search, MapPin, Briefcase, Globe, Phone, Download, Filter, Triangle } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
@@ -27,7 +27,7 @@ export function SearcherView() {
     setShowResults(false);
     
     try {
-      const response = await fetch('/api/search', {
+      const response = await fetch('/.netlify/functions/fetch-leads', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -229,7 +229,7 @@ export function SearcherView() {
                    
                    {/* Core */}
                    <div className="w-16 h-16 bg-gradient-to-br from-orus-gold to-orus-amber rounded-full shadow-[0_0_40px_rgba(212,175,55,0.8)] flex items-center justify-center">
-                     <span className="text-black font-display font-bold text-3xl">O</span>
+                     <Triangle className="text-black" size={24} strokeWidth={2.5} />
                    </div>
                 </div>
                 <motion.h2 

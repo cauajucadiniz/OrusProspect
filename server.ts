@@ -9,8 +9,8 @@ async function startServer() {
 
   app.use(express.json());
 
-  // API Routes
-  app.post('/api/search', async (req, res) => {
+  // API Routes (Simulating Netlify function for local AI Studio preview)
+  app.post('/.netlify/functions/fetch-leads', async (req, res) => {
     try {
       const { searchTerm, location, userId, limit } = req.body;
       const apifyToken = process.env.APIFY_API_TOKEN;
