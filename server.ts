@@ -23,29 +23,6 @@ async function startServer() {
         return res.status(400).json({ error: 'Termo de busca e usuário são obrigatórios.' });
       }
 
-      // Supabase server-side client
-      const rawUrl = process.env.VITE_SUPABASE_URL || 'https://rrzolxpgxshuxzaloakd.supabase.co';
-      const supabaseUrl = rawUrl.replace(/\/rest\/v1\/?$/, '');
-      const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJyem9seHBneHNodXh6YWxvYWtkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3NTUwMDEsImV4cCI6MjA5MzMzMTAwMX0.cA6FNWVkzCQGUTxMmI--9tgvky-O_utr5kpEaVx7E_M';
-      
-      const { createClient } = await import('@supabase/supabase-js');
-      const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-      // Check user credits
-      const { data: profile, error: profileErr } = await supabase
-        .from('profiles')
-        .select('credits_remaining')
-        .eq('id', userId)
-        .single();
-        
-      if (profileErr || !profile) {
-        return res.status(404).json({ error: 'Perfil não encontrado.' });
-      }
-      
-      if (profile.credits_remaining <= 0) {
-        return res.status(403).json({ error: 'Créditos insuficientes para realizar a busca.' });
-      }
-
       const client = new ApifyClient({
         token: apifyToken,
       });
@@ -75,24 +52,7 @@ async function startServer() {
         status: 'Nova Oportunidade',
       }));
 
-      let savedLeads = leads;
-
-      // Insert into Supabase
-      if (leads.length > 0) {
-         const { data: insertedData, error: insertError } = await supabase.from('leads').insert(leads).select();
-         if (insertError) {
-             console.error('Erro ao inserir leads no Supabase:', insertError);
-             // we won't deduct credit if we failed to save them (optional, but good practice safely)
-         } else {
-             savedLeads = insertedData || leads;
-             // Deduct 1 credit
-             await supabase.from('profiles').update({ 
-               credits_remaining: profile.credits_remaining - 1 
-             }).eq('id', userId);
-         }
-      }
-
-      res.json({ leads: savedLeads, resultsCount: savedLeads.length });
+      res.json({ leads, resultsCount: leads.length });
     } catch (error: any) {
       console.error('Apify API error:', error);
       res.status(500).json({ error: error.message || 'Internal server error' });

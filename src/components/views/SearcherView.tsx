@@ -27,8 +27,16 @@ export function SearcherView() {
 
   const handleSearch = async () => {
     setErrorInfo(null);
-    if (!profile || !user) return;
-    if (profile.credits_remaining === 0) {
+    if (!user) return;
+    
+    // Fallback current credits if profile context is somehow empty
+    let currentCredits = profile?.credits_remaining;
+    if (currentCredits === undefined) {
+      const { data } = await supabase.from('profiles').select('credits_remaining').eq('id', user.id).single();
+      currentCredits = data?.credits_remaining || 0;
+    }
+
+    if (currentCredits <= 0) {
       setErrorInfo('Seus créditos esgotaram. Aguarde o reset diário ou faça upgrade.');
       return;
     }
@@ -59,8 +67,30 @@ export function SearcherView() {
       const generatedCount = data.resultsCount;
 
       if (generatedCount > 0) {
-        setResults(data.leads || []);
+        const resultLeads = data.leads || [];
+        setResults(resultLeads);
         setShowResults(true);
+        
+        // Insert into Supabase from frontend
+        try {
+           const leadsToInsert = resultLeads.map((r: any) => ({
+             user_id: user.id,
+             name: r.name || 'Local Sem Nome',
+             industry: r.industry || segment || '',
+             description: r.industry || segment || '',
+             phone: r.phone || '',
+             website: r.website || '',
+             address: r.address || location || '',
+             status: 'Nova Oportunidade',
+           }));
+           await supabase.from('leads').insert(leadsToInsert);
+           if (updateCredits) {
+             await updateCredits(-1);
+           }
+        } catch (insertErr) {
+           console.error("Erro ao salvar leads no CRM: ", insertErr);
+        }
+
       } else {
         // fallback show empty results instead of crashing
         setResults([]);
