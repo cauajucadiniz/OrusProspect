@@ -18,7 +18,7 @@ export function SearcherView() {
   const [location, setLocation] = useState('');
   const [segment, setSegment] = useState('');
   const [limit, setLimit] = useState(10);
-  const { profile, updateCredits, user } = useAuth();
+  const { profile, user, refreshProfile } = useAuth();
   const [errorInfo, setErrorInfo] = useState<string | null>(null);
 
   useEffect(() => {
@@ -80,23 +80,21 @@ export function SearcherView() {
              phone: r.phone || '',
              website: r.website || '',
              address: r.address || location || '',
-             status: 'Nova Oportunidade',
+             status: 'new',
            }));
            
-           // Fetch a single row just to refresh schema definition on the client, or just do the query
            const { error: insertErr } = await supabase.from('leads').insert(leadsToInsert);
            
            if (insertErr) {
              console.error("Erro ao salvar leads no CRM: ", insertErr);
-             alert("Erro ao salvar leads no CRM: " + insertErr.message);
              setResults(resultLeads.map((r: any) => ({ ...r, isSaved: false })));
            } else {
              console.log("Leads inseridos com sucesso.");
              setResults(resultLeads.map((r: any) => ({ ...r, isSaved: true })));
+             if (refreshProfile) await refreshProfile();
            }
         } catch (insertErr: any) {
            console.error("Exceção ao salvar leads no CRM: ", insertErr);
-           alert("Erro ao salvar leads no CRM: " + insertErr.message);
            setResults(resultLeads.map((r: any) => ({ ...r, isSaved: false })));
         }
 
@@ -123,14 +121,15 @@ export function SearcherView() {
         phone: r.phone || '',
         website: r.website || '',
         address: r.address || location || '',
-        status: 'Nova Oportunidade',
+        status: 'new',
       }));
 
       const { error } = await supabase.from('leads').insert(leadsToInsert);
       if (error) throw error;
       alert('Leads adicionados ao CRM com sucesso!');
+      if (refreshProfile) await refreshProfile();
     } catch (err: any) {
-      console.error(err);
+      console.error("Erro ao adicionar leads no click manual", err);
       alert('Erro ao adicionar leads ao CRM: ' + err.message);
     }
   };

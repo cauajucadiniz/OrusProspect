@@ -47,7 +47,7 @@ export function CRMView() {
     if (!error && data) {
       setCards(data.map(lead => ({
         id: lead.id,
-        columnId: lead.status || 'Nova Oportunidade',
+        columnId: lead.status === 'new' ? 'Nova Oportunidade' : (lead.status || 'Nova Oportunidade'),
         company: lead.company_name || 'Desconhecido',
         contact: lead.industry || 'Sem Segmento',
         phone: lead.phone || '', // Using actual phone if exists
