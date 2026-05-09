@@ -75,20 +75,26 @@ export function SearcherView() {
         try {
            const leadsToInsert = resultLeads.map((r: any) => ({
              user_id: user.id,
-             name: r.name || 'Local Sem Nome',
+             company_name: r.name || 'Local Sem Nome',
              industry: r.industry || segment || '',
-             description: r.industry || segment || '',
              phone: r.phone || '',
              website: r.website || '',
              address: r.address || location || '',
              status: 'Nova Oportunidade',
            }));
-           await supabase.from('leads').insert(leadsToInsert);
-           if (updateCredits) {
-             await updateCredits(-1);
+           
+           const { error: insertErr } = await supabase.from('leads').insert(leadsToInsert);
+           if (insertErr) {
+             console.error("Erro ao salvar leads no CRM: ", insertErr);
+             alert("Erro ao salvar leads no CRM: " + insertErr.message);
+           } else {
+             // Let the Supabase trigger handle credit updates automatically
+             // Alert success isn't strictly requested here but we log it
+             console.log("Leads inseridos com sucesso.");
            }
-        } catch (insertErr) {
-           console.error("Erro ao salvar leads no CRM: ", insertErr);
+        } catch (insertErr: any) {
+           console.error("Exceção ao salvar leads no CRM: ", insertErr);
+           alert("Erro ao salvar leads no CRM: " + insertErr.message);
         }
 
       } else {
@@ -109,9 +115,11 @@ export function SearcherView() {
     try {
       const leadsToInsert = results.map(r => ({
         user_id: user.id,
-        name: r.name,
+        company_name: r.name || 'Local Sem Nome',
         industry: r.industry || segment || '',
-        description: r.industry || segment || '',
+        phone: r.phone || '',
+        website: r.website || '',
+        address: r.address || location || '',
         status: 'Nova Oportunidade',
       }));
 
@@ -120,7 +128,7 @@ export function SearcherView() {
       alert('Leads adicionados ao CRM com sucesso!');
     } catch (err: any) {
       console.error(err);
-      alert('Erro ao adicionar leads ao CRM.');
+      alert('Erro ao adicionar leads ao CRM: ' + err.message);
     }
   };
 

@@ -48,9 +48,9 @@ export function CRMView() {
       setCards(data.map(lead => ({
         id: lead.id,
         columnId: lead.status || 'Nova Oportunidade',
-        company: lead.name,
-        contact: lead.industry,
-        phone: '', // Mocked phone for design purposes
+        company: lead.company_name || 'Desconhecido',
+        contact: lead.industry || 'Sem Segmento',
+        phone: lead.phone || '', // Using actual phone if exists
         ...lead
       })));
     }
