@@ -1,0 +1,51 @@
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Bebas Neue", ui-sans-serif, system-ui;
+
+  /* Orus Brand Colors */
+  --color-orus-gold: #D4AF37;
+  --color-orus-gold-mid: #C9B076;
+  --color-orus-gold-dark: #A16207;
+  
+  /* Dark Theme Surfaces */
+  --color-background: #050505;
+  --color-surface: #0D0D0D;
+  --color-surface-elevated: #141414;
+  --color-border: rgba(212, 175, 55, 0.15);
+}
+
+@layer base {
+  body {
+    @apply bg-background text-zinc-300 font-sans antialiased;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display text-white tracking-[0.15em] -skew-x-[5deg];
+  }
+
+  .blueprint-grid {
+    background-size: 40px 40px;
+    background-image: radial-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  }
+}
+
+@layer utilities {
+  .glass-card {
+    @apply bg-surface/70 backdrop-blur-xl border border-border;
+  }
+
+  .text-gradient-gold {
+    @apply bg-clip-text text-transparent bg-gradient-to-tr from-orus-gold via-[#F9D423] to-[#C5A028];
+  }
+
+  .btn-orus {
+    @apply relative overflow-hidden bg-transparent border border-orus-gold text-orus-gold hover:text-black py-2 px-6 rounded transition-all duration-300;
+  }
+  .btn-orus:hover {
+    box-shadow: 0 0 25px rgba(212, 175, 55, 0.4);
+    background: linear-gradient(135deg, #D4AF37 0%, #F9D423 50%, #C5A028 100%);
+  }
+}
