@@ -71,12 +71,15 @@ export const handler: Handler = async (event, context) => {
       status: 'Nova Oportunidade',
     }));
 
+    let savedLeads = leads;
+
     // Insert into Supabase
     if (leads.length > 0) {
-        const { error: insertError } = await supabase.from('leads').insert(leads);
+        const { data: insertedData, error: insertError } = await supabase.from('leads').insert(leads).select();
         if (insertError) {
             console.error('Erro ao inserir leads no Supabase:', insertError);
         } else {
+            savedLeads = insertedData || leads;
             // Deduct 1 credit
             await supabase.from('profiles').update({ 
               credits_remaining: profile.credits_remaining - 1 
@@ -86,7 +89,7 @@ export const handler: Handler = async (event, context) => {
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ leads, resultsCount: leads.length })
+      body: JSON.stringify({ leads: savedLeads, resultsCount: savedLeads.length })
     };
   } catch (error: any) {
     console.error('Apify API error:', error);

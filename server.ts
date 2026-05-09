@@ -75,23 +75,24 @@ async function startServer() {
         status: 'Nova Oportunidade',
       }));
 
+      let savedLeads = leads;
+
       // Insert into Supabase
       if (leads.length > 0) {
-         const { error: insertError } = await supabase.from('leads').insert(leads);
+         const { data: insertedData, error: insertError } = await supabase.from('leads').insert(leads).select();
          if (insertError) {
              console.error('Erro ao inserir leads no Supabase:', insertError);
              // we won't deduct credit if we failed to save them (optional, but good practice safely)
          } else {
+             savedLeads = insertedData || leads;
              // Deduct 1 credit
              await supabase.from('profiles').update({ 
                credits_remaining: profile.credits_remaining - 1 
              }).eq('id', userId);
          }
-      } else {
-        // Did not find any results, still deduct? We usually do or don't. Let's not if it's 0.
       }
 
-      res.json({ leads, resultsCount: leads.length });
+      res.json({ leads: savedLeads, resultsCount: savedLeads.length });
     } catch (error: any) {
       console.error('Apify API error:', error);
       res.status(500).json({ error: error.message || 'Internal server error' });

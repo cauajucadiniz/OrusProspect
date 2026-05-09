@@ -1,19 +1,29 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, MapPin, Briefcase, Globe, Phone, Download, Filter, Triangle } from 'lucide-react';
+import { Search, MapPin, Briefcase, Globe, Phone, Download, Filter, Triangle, Check } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 
 export function SearcherView() {
   const [isScanning, setIsScanning] = useState(false);
-  const [showResults, setShowResults] = useState(false);
-  const [results, setResults] = useState<any[]>([]);
+  const [results, setResults] = useState<any[]>(() => {
+    const saved = localStorage.getItem('orus_search_results');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [showResults, setShowResults] = useState(() => {
+    const saved = localStorage.getItem('orus_search_results');
+    return saved ? JSON.parse(saved).length > 0 : false;
+  });
   const [location, setLocation] = useState('');
   const [segment, setSegment] = useState('');
   const [limit, setLimit] = useState(10);
   const { profile, updateCredits, user } = useAuth();
   const [errorInfo, setErrorInfo] = useState<string | null>(null);
+
+  useEffect(() => {
+    localStorage.setItem('orus_search_results', JSON.stringify(results));
+  }, [results]);
 
   const handleSearch = async () => {
     setErrorInfo(null);
@@ -278,8 +288,8 @@ export function SearcherView() {
                         </div>
                       </div>
                       <div className="flex items-center gap-6">
-                        <span className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider rounded border border-green-500/30 text-green-400 shadow-[0_0_10px_rgba(34,197,94,0.1)]">
-                          Salvo
+                        <span className="px-3 py-1 flex items-center text-[10px] font-semibold uppercase tracking-wider rounded border border-green-500/30 text-green-400 shadow-[0_0_10px_rgba(34,197,94,0.1)]">
+                          <Check size={10} className="inline mr-1"/> No CRM
                         </span>
                       </div>
                     </motion.div>

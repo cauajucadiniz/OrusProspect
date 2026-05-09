@@ -205,7 +205,14 @@ function KanbanCard({ card, isOverlay = false, onDelete }: any) {
           <button className="text-gray-600 hover:text-gray-300 transition-opacity cursor-grab">
             <GripVertical size={16} />
           </button>
-          <button onClick={() => onDelete(card.id)} className="text-red-500/50 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button 
+            onClick={(e) => {
+               e.stopPropagation();
+               if(onDelete) onDelete(card.id);
+            }} 
+            className="text-red-500/50 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity relative z-10"
+            onPointerDown={(e) => e.stopPropagation()}
+          >
             <Trash2 size={14} />
           </button>
         </div>
