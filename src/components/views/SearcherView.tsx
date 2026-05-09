@@ -75,7 +75,7 @@ export function SearcherView() {
         try {
            const leadsToInsert = resultLeads.map((r: any) => ({
              user_id: user.id,
-             company_name: r.name || 'Local Sem Nome',
+             company_name: r.name || r.company_name || 'Local Sem Nome',
              industry: r.industry || segment || '',
              phone: r.phone || '',
              website: r.website || '',
@@ -83,18 +83,21 @@ export function SearcherView() {
              status: 'Nova Oportunidade',
            }));
            
+           // Fetch a single row just to refresh schema definition on the client, or just do the query
            const { error: insertErr } = await supabase.from('leads').insert(leadsToInsert);
+           
            if (insertErr) {
              console.error("Erro ao salvar leads no CRM: ", insertErr);
              alert("Erro ao salvar leads no CRM: " + insertErr.message);
+             setResults(resultLeads.map((r: any) => ({ ...r, isSaved: false })));
            } else {
-             // Let the Supabase trigger handle credit updates automatically
-             // Alert success isn't strictly requested here but we log it
              console.log("Leads inseridos com sucesso.");
+             setResults(resultLeads.map((r: any) => ({ ...r, isSaved: true })));
            }
         } catch (insertErr: any) {
            console.error("Exceção ao salvar leads no CRM: ", insertErr);
            alert("Erro ao salvar leads no CRM: " + insertErr.message);
+           setResults(resultLeads.map((r: any) => ({ ...r, isSaved: false })));
         }
 
       } else {
@@ -326,9 +329,16 @@ export function SearcherView() {
                         </div>
                       </div>
                       <div className="flex items-center gap-6">
-                        <span className="px-3 py-1 flex items-center text-[10px] font-semibold uppercase tracking-wider rounded border border-green-500/30 text-green-400 shadow-[0_0_10px_rgba(34,197,94,0.1)]">
-                          <Check size={10} className="inline mr-1"/> No CRM
-                        </span>
+                        {result.isSaved !== false && (
+                          <span className="px-3 py-1 flex items-center text-[10px] font-semibold uppercase tracking-wider rounded border border-green-500/30 text-green-400 shadow-[0_0_10px_rgba(34,197,94,0.1)]">
+                            <Check size={10} className="inline mr-1"/> No CRM
+                          </span>
+                        )}
+                        {result.isSaved === false && (
+                          <span className="px-3 py-1 flex items-center text-[10px] font-semibold uppercase tracking-wider rounded border border-red-500/30 text-red-400 shadow-[0_0_10px_rgba(239,68,68,0.1)]">
+                            Erro ao salvar
+                          </span>
+                        )}
                       </div>
                     </motion.div>
                   ))}
