@@ -68,12 +68,19 @@ export function SearcherView() {
 
       if (generatedCount > 0) {
         const resultLeads = data.leads || [];
-        setResults(resultLeads);
+        const sortedLeads = resultLeads.sort((a: any, b: any) => {
+          const hasPhoneA = Boolean(a.phone);
+          const hasPhoneB = Boolean(b.phone);
+          if (hasPhoneA && !hasPhoneB) return -1;
+          if (!hasPhoneA && hasPhoneB) return 1;
+          return 0;
+        });
+        setResults(sortedLeads);
         setShowResults(true);
         
         // Insert into Supabase from frontend
         try {
-           const leadsToInsert = resultLeads.map((r: any) => ({
+           const leadsToInsert = sortedLeads.map((r: any) => ({
              user_id: user.id,
              company_name: r.name || r.company_name || 'Local Sem Nome',
              industry: r.industry || segment || '',
@@ -87,15 +94,15 @@ export function SearcherView() {
            
            if (insertErr) {
              console.error("Erro ao salvar leads no CRM: ", insertErr);
-             setResults(resultLeads.map((r: any) => ({ ...r, isSaved: false })));
+             setResults(sortedLeads.map((r: any) => ({ ...r, isSaved: false })));
            } else {
              console.log("Leads inseridos com sucesso.");
-             setResults(resultLeads.map((r: any) => ({ ...r, isSaved: true })));
+             setResults(sortedLeads.map((r: any) => ({ ...r, isSaved: true })));
              if (refreshProfile) await refreshProfile();
            }
         } catch (insertErr: any) {
            console.error("Exceção ao salvar leads no CRM: ", insertErr);
-           setResults(resultLeads.map((r: any) => ({ ...r, isSaved: false })));
+           setResults(sortedLeads.map((r: any) => ({ ...r, isSaved: false })));
         }
 
       } else {
@@ -203,21 +210,16 @@ export function SearcherView() {
                      <option value="10">10 Leads</option>
                      <option value="15">15 Leads</option>
                      <option value="20">20 Leads</option>
-                     <option value="50">50 Leads (Plus+)</option>
-                     <option value="100">100 Leads (Plus+)</option>
-                     <option value="150">150 Leads (Plus+)</option>
-                   </select>
+                      <option value="50" disabled={!(profile?.role === 'plus' || profile?.role === 'premium')}>50 Leads {profile?.role === 'plus' || profile?.role === 'premium' ? '(Plus+)' : '🔒 (Planos Plus/Premium)'}</option>
+                      <option value="100" disabled={!(profile?.role === 'plus' || profile?.role === 'premium')}>100 Leads {profile?.role === 'plus' || profile?.role === 'premium' ? '(Plus+)' : '🔒 (Planos Plus/Premium)'}</option>
+                      <option value="150" disabled={!(profile?.role === 'plus' || profile?.role === 'premium')}>150 Leads {profile?.role === 'plus' || profile?.role === 'premium' ? '(Plus+)' : '🔒 (Planos Plus/Premium)'}</option>
+                    </select>
                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
                      <svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg">
                        <path d="M1 1.5L6 6.5L11 1.5" stroke="#666666" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                      </svg>
                    </div>
                 </div>
-              </div>
-
-              <div className="pt-2 border-t border-white/5 space-y-4">
-                <ToggleSwitch label="Exigir Site" defaultChecked />
-                <ToggleSwitch label="Exigir Telefone" defaultChecked />
               </div>
 
               <button 

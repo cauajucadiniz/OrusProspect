@@ -17,7 +17,8 @@ import {
 } from '@dnd-kit/sortable';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Phone, Calendar, GripVertical, Trash2 } from 'lucide-react';
+import { Phone, MessageCircle, GripVertical, Trash2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -31,6 +32,7 @@ const initialColumns = {
 export function CRMView() {
   const [cards, setCards] = useState<any[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [leadToDelete, setLeadToDelete] = useState<string | null>(null);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -57,7 +59,7 @@ export function CRMView() {
   };
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(PointerSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
@@ -113,10 +115,15 @@ export function CRMView() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Deseja excluir este lead?')) return;
-    setCards(prev => prev.filter(c => c.id !== id));
-    await supabase.from('leads').delete().eq('id', id);
+  const handleDeleteRequest = (id: string) => {
+    setLeadToDelete(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!leadToDelete) return;
+    setCards(prev => prev.filter(c => c.id !== leadToDelete));
+    await supabase.from('leads').delete().eq('id', leadToDelete);
+    setLeadToDelete(null);
   };
 
   const columns = Object.values(initialColumns).map(col => ({
@@ -141,14 +148,34 @@ export function CRMView() {
           onDragEnd={handleDragEnd}
         >
           {columns.map(column => (
-            <KanbanColumn key={column.id} column={column} onDelete={handleDelete} />
+            <KanbanColumn key={column.id} column={column} onDelete={handleDeleteRequest} />
           ))}
 
           <DragOverlay>
-            {activeCardData ? <KanbanCard card={activeCardData} isOverlay onDelete={handleDelete} /> : null}
+            {activeCardData ? <KanbanCard card={activeCardData} isOverlay onDelete={handleDeleteRequest} /> : null}
           </DragOverlay>
         </DndContext>
       </div>
+
+      <AnimatePresence>
+        {leadToDelete && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <motion.div 
+               initial={{ opacity: 0, scale: 0.95 }}
+               animate={{ opacity: 1, scale: 1 }}
+               exit={{ opacity: 0, scale: 0.95 }}
+               className="bg-[#111] border border-orus-gold/30 rounded-2xl p-6 max-w-sm w-full shadow-2xl relative"
+            >
+              <h3 className="text-xl font-display font-medium text-white mb-2">Excluir Lead</h3>
+              <p className="text-gray-400 text-sm mb-6">Tem certeza que deseja excluir este lead? Esta ação não pode ser desfeita.</p>
+              <div className="flex justify-end gap-3">
+                <button onClick={() => setLeadToDelete(null)} className="px-4 py-2 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 transition-colors">Cancelar</button>
+                <button onClick={confirmDelete} className="px-4 py-2 rounded-lg text-sm font-medium bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20 transition-colors">Confirmar Exclusão</button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -192,12 +219,12 @@ function KanbanCard({ card, isOverlay = false, onDelete }: any) {
   return (
     <div className={`p-4 rounded-xl bg-[#1A1A1A] border ${isOverlay ? 'border-orus-gold shadow-2xl scale-105 rotate-2' : 'border-white/5 shadow-lg'} group hover:border-white/10 transition-colors relative`}>
       <div className="flex justify-between items-start mb-3">
-        <div className="flex items-center gap-3 max-w-[80%]">
+        <div className="flex items-center gap-3 max-w-[80%] min-w-0">
           <div className="shrink-0 w-10 h-10 rounded-lg bg-black/50 flex items-center justify-center font-display font-bold text-gray-400">
             {card.company?.charAt(0) || 'L'}
           </div>
-          <div>
-            <h4 className="font-medium text-sm text-gray-200 leading-tight truncate">{card.company}</h4>
+          <div className="min-w-0 flex-1">
+            <h4 className="font-medium text-sm text-gray-200 leading-tight truncate block">{card.company}</h4>
             <span className="text-xs text-gray-500 truncate block">{card.contact}</span>
           </div>
         </div>
@@ -218,12 +245,24 @@ function KanbanCard({ card, isOverlay = false, onDelete }: any) {
         </div>
       </div>
       <div className="pt-3 border-t border-white/5 flex items-center justify-between">
-        <span className="flex items-center gap-1.5 text-xs text-gray-400">
-          <Phone size={12} className="text-gray-500" /> {card.phone || 'Sem contato'}
+        <span className="flex items-center gap-1.5 text-xs text-gray-400 truncate pr-2">
+          <Phone size={12} className="text-gray-500 shrink-0" /> <span className="truncate">{card.phone || 'Sem contato'}</span>
         </span>
-        <button className="w-6 h-6 rounded bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors">
-           <Calendar size={12} className="text-gray-400" />
-        </button>
+        {card.phone ? (
+          <a
+            href={`https://wa.me/55${card.phone.replace(/\\D/g, '')}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            onPointerDown={(e) => e.stopPropagation()}
+            className="w-7 h-7 shrink-0 rounded bg-green-500/10 flex items-center justify-center hover:bg-green-500/20 transition-colors border border-green-500/20 text-green-400"
+          >
+             <MessageCircle size={14} />
+          </a>
+        ) : (
+          <button disabled className="w-7 h-7 shrink-0 rounded bg-white/5 flex items-center justify-center cursor-not-allowed opacity-50 text-gray-500">
+             <MessageCircle size={14} />
+          </button>
+        )}
       </div>
     </div>
   );
