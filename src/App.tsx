@@ -18,6 +18,15 @@ export default function App() {
 
   useEffect(() => {
     setIsMounted(true);
+    
+    const handleViewChange = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail) {
+        setCurrentView(customEvent.detail as ViewType);
+      }
+    };
+    window.addEventListener('change-view', handleViewChange);
+    return () => window.removeEventListener('change-view', handleViewChange);
   }, []);
 
   if (!isMounted || loading) return <div className="flex h-screen bg-background items-center justify-center"><div className="w-8 h-8 rounded-sm bg-gradient-to-br from-orus-gold to-orus-gold-dark animate-pulse" /></div>;

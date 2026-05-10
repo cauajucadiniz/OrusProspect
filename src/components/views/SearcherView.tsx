@@ -204,16 +204,31 @@ export function SearcherView() {
                    <select 
                      className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-sm focus:outline-none focus:border-orus-gold/50 focus:ring-1 focus:ring-orus-gold/50 transition-all text-gray-200 appearance-none"
                      value={limit}
-                     onChange={(e) => setLimit(parseInt(e.target.value))}
+                     onChange={(e) => {
+                       const val = parseInt(e.target.value);
+                       const role = profile?.role || 'free';
+                       
+                       if (role === 'free' && val > 20) {
+                         window.dispatchEvent(new CustomEvent('change-view', { detail: 'plans' }));
+                         return;
+                       }
+                       
+                       if (role === 'plus' && val > 50) {
+                         window.dispatchEvent(new CustomEvent('change-view', { detail: 'plans' }));
+                         return;
+                       }
+                       
+                       setLimit(val);
+                     }}
                    >
                      <option value="5">5 Leads</option>
                      <option value="10">10 Leads</option>
                      <option value="15">15 Leads</option>
                      <option value="20">20 Leads</option>
-                      <option value="50" disabled={!(profile?.role === 'plus' || profile?.role === 'premium')}>50 Leads {profile?.role === 'plus' || profile?.role === 'premium' ? '(Plus+)' : '🔒 (Planos Plus/Premium)'}</option>
-                      <option value="100" disabled={!(profile?.role === 'plus' || profile?.role === 'premium')}>100 Leads {profile?.role === 'plus' || profile?.role === 'premium' ? '(Plus+)' : '🔒 (Planos Plus/Premium)'}</option>
-                      <option value="150" disabled={!(profile?.role === 'plus' || profile?.role === 'premium')}>150 Leads {profile?.role === 'plus' || profile?.role === 'premium' ? '(Plus+)' : '🔒 (Planos Plus/Premium)'}</option>
-                    </select>
+                     <option value="50">50 Leads {profile?.role === 'free' ? '🔒 (Plano Plus)' : '(Plus+)'}</option>
+                     <option value="100">100 Leads {(profile?.role === 'free' || profile?.role === 'plus') ? '🔒 (Plano Premium)' : '(Premium)'}</option>
+                     <option value="150">150 Leads {(profile?.role === 'free' || profile?.role === 'plus') ? '🔒 (Plano Premium)' : '(Premium)'}</option>
+                   </select>
                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
                      <svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg">
                        <path d="M1 1.5L6 6.5L11 1.5" stroke="#666666" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>

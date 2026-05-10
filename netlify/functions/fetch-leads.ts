@@ -26,10 +26,12 @@ export const handler: Handler = async (event, context) => {
     // Call Apify Actor
     const input = {
         searchStringsArray: [`${searchTerm} in ${location}`],
-        queries: [searchTerm],
-        locationQuery: location,
+        language: "pt",
         maxCrawledPlacesPerSearch: parseInt(limit) || 10,
-        maxPlacesPerQuery: parseInt(limit) || 10,
+        maxImages: 0,
+        maxReviews: 0,
+        scrapeReviewers: false,
+        scrapeImages: false,
     };
 
     console.log('Iniciando robô do Apify com input:', input);

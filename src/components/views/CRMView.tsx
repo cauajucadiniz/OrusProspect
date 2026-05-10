@@ -218,11 +218,11 @@ function KanbanColumn({ column, onDelete }: any) {
   );
 }
 
-function KanbanCard({ card, isOverlay = false, onDelete }: any) {
+function KanbanCard({ card, isOverlay = false, onDelete, dragListeners, dragAttributes }: any) {
   return (
     <div className={`p-4 rounded-xl bg-[#1A1A1A] border ${isOverlay ? 'border-orus-gold shadow-2xl scale-105 rotate-2' : 'border-white/5 shadow-lg'} group hover:border-white/10 transition-colors relative`}>
       <div className="flex justify-between items-start mb-3">
-        <div className="flex items-center gap-3 max-w-[80%] min-w-0">
+        <div className="flex items-center gap-3 max-w-[85%] min-w-0">
           <div className="shrink-0 w-10 h-10 rounded-lg bg-black/50 flex items-center justify-center font-display font-bold text-gray-400">
             {card.company?.charAt(0) || 'L'}
           </div>
@@ -231,19 +231,13 @@ function KanbanCard({ card, isOverlay = false, onDelete }: any) {
             <span className="text-xs text-gray-500 truncate block">{card.contact}</span>
           </div>
         </div>
-        <div className="flex flex-col items-center gap-2">
-          <button className="text-gray-600 hover:text-gray-300 transition-opacity cursor-grab">
-            <GripVertical size={16} />
-          </button>
+        <div className="flex flex-col items-end shrink-0">
           <button 
-            onClick={(e) => {
-               e.stopPropagation();
-               if(onDelete) onDelete(card.id);
-            }} 
-            className="text-red-500/50 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity relative z-10"
-            onPointerDown={(e) => e.stopPropagation()}
+            className="p-1 -mr-2 -mt-1 text-gray-500 hover:text-white transition-opacity cursor-grab touch-none"
+            {...dragListeners}
+            {...dragAttributes}
           >
-            <Trash2 size={14} />
+            <GripVertical size={18} />
           </button>
         </div>
       </div>
@@ -251,21 +245,41 @@ function KanbanCard({ card, isOverlay = false, onDelete }: any) {
         <span className="flex items-center gap-1.5 text-xs text-gray-400 truncate pr-2">
           <Phone size={12} className="text-gray-500 shrink-0" /> <span className="truncate">{card.phone || 'Sem contato'}</span>
         </span>
-        {card.phone ? (
-          <a
-            href={`https://wa.me/55${card.phone.replace(/\D/g, '')}`}
-            target="_blank"
-            rel="noopener noreferrer"
+        <div className="flex items-center gap-2 shrink-0">
+          <button 
+            onClick={(e) => {
+               e.stopPropagation();
+               if(onDelete) onDelete(card.id);
+            }} 
+            className="w-8 h-8 flex items-center justify-center rounded bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20 transition-colors"
             onPointerDown={(e) => e.stopPropagation()}
-            className="w-7 h-7 shrink-0 rounded bg-green-500/10 flex items-center justify-center hover:bg-green-500/20 transition-colors border border-green-500/20 text-green-400"
+            title="Excluir Lead"
           >
-             <MessageCircle size={14} />
-          </a>
-        ) : (
-          <button disabled className="w-7 h-7 shrink-0 rounded bg-white/5 flex items-center justify-center cursor-not-allowed opacity-50 text-gray-500">
-             <MessageCircle size={14} />
+            <Trash2 size={14} />
           </button>
-        )}
+          
+          {card.phone ? (
+            <a
+              href={(() => {
+                const cleaned = card.phone.replace(/\D/g, '');
+                return cleaned.startsWith('55') 
+                  ? `https://wa.me/${cleaned}` 
+                  : `https://wa.me/55${cleaned}`;
+              })()}
+              target="_blank"
+              rel="noopener noreferrer"
+              onPointerDown={(e) => e.stopPropagation()}
+              className="w-8 h-8 flex flex-shrink-0 items-center justify-center rounded-full bg-green-500 hover:bg-green-400 transition-colors shadow-lg shadow-green-500/20 text-[#111]"
+              title="Chamar no WhatsApp"
+            >
+               <MessageCircle size={14} />
+            </a>
+          ) : (
+            <div className="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 cursor-not-allowed opacity-50 text-gray-500">
+               <MessageCircle size={14} />
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -288,8 +302,8 @@ function SortableCard({ card, onDelete }: any) {
   };
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="outline-none touch-manipulation">
-      <KanbanCard card={card} onDelete={onDelete} />
+    <div ref={setNodeRef} style={style} className="outline-none touch-manipulation">
+      <KanbanCard card={card} onDelete={onDelete} dragListeners={listeners} dragAttributes={attributes} />
     </div>
   );
 }
