@@ -32,9 +32,16 @@ export function LoginView() {
           throw new Error('As senhas não coincidem.');
         }
 
+        const invite = new URLSearchParams(window.location.search).get('invite');
+        
         const { error } = await supabase.auth.signUp({
           email,
           password,
+          options: {
+            data: {
+              invite: invite,
+            }
+          }
         });
         if (error) throw error;
         

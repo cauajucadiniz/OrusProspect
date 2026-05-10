@@ -120,7 +120,29 @@ export function DashboardView() {
             <CreditsKpiCard credits={profile?.credits_remaining || 0} />
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-[400px]">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-[400px] relative">
+            {/* Paywall Overlay */}
+            {profile?.role !== 'premium' && (
+              <div className="absolute inset-0 z-50 flex items-center justify-center p-6">
+                <div className="absolute inset-0 bg-background/80 backdrop-blur-md rounded-sm border border-orus-gold/30"></div>
+                <div className="relative z-10 glass-card max-w-md w-full p-8 text-center border-gradient-gold border-2 rounded-xl flex flex-col items-center">
+                  <div className="w-16 h-16 bg-gradient-to-br from-orus-gold to-orus-amber rounded-full flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(212,175,55,0.4)]">
+                    <Zap size={32} className="text-black" />
+                  </div>
+                  <h3 className="text-2xl font-display font-bold text-white mb-3">Relatórios Avançados</h3>
+                  <p className="text-gray-400 text-sm mb-8 leading-relaxed">
+                    Desbloqueie visões analíticas profundas, previsões de conversão e relatórios detalhados com o plano Premium.
+                  </p>
+                  <button 
+                    onClick={() => window.dispatchEvent(new CustomEvent('change-view', { detail: 'plans' }))}
+                    className="w-full py-3 rounded-xl bg-gradient-to-r from-orus-gold to-orus-amber hover:opacity-90 text-black font-semibold shadow-[0_0_20px_rgba(201,176,118,0.3)] transition-all uppercase tracking-wider text-sm"
+                  >
+                    Fazer Upgrade Premium
+                  </button>
+                </div>
+              </div>
+            )}
+            
             {/* Main Chart */}
             <div className="lg:col-span-2 glass-card p-8 rounded-sm flex flex-col">
               <h3 className="text-xl font-display font-medium mb-6 text-white skew-x-[-5deg]">Crescimento de Leads</h3>

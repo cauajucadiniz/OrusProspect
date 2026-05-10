@@ -30,7 +30,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = async (userId: string) => {
+  const fetchProfile = async (u: User) => {
+    const userId = u.id;
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -40,10 +41,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         
       if (error && error.code === 'PGRST116') {
         const resetDate = new Date().toISOString().split('T')[0];
+        
+        let role = 'free';
+        let credits = 20;
+        
+        // We can check if they have invite in user_metadata OR just check URL in case they just signed up
+        const params = new URLSearchParams(window.location.search);
+        const invite = params.get('invite') || u.user_metadata?.invite;
+
+        if (invite === 'orus_vip_2024') {
+          role = 'internal_team';
+          credits = 35;
+        }
+
         const newProfile = {
           id: userId,
-          role: 'external_user',
-          credits_remaining: 20,
+          role: role,
+          credits_remaining: credits,
           last_reset_date: resetDate
         };
         const { data: inserted } = await supabase.from('profiles').insert([newProfile]).select().single();
@@ -55,7 +69,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         // Check for reset logic
         const today = new Date().toISOString().split('T')[0];
         if (data.last_reset_date !== today) {
-          const newCredits = data.role === 'internal_team' ? 35 : 20;
+          let newCredits = 20;
+          if (data.role === 'internal_team') newCredits = 35;
+          if (data.role === 'plus') newCredits = 100;
+          if (data.role === 'premium') newCredits = 1000;
+          
           const { data: updated } = await supabase
             .from('profiles')
             .update({ credits_remaining: newCredits, last_reset_date: today })
@@ -82,7 +100,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchProfile(session.user.id);
+        fetchProfile(session.user);
       } else {
         setLoading(false);
       }
@@ -92,7 +110,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       (_event, session) => {
         setUser(session?.user ?? null);
         if (session?.user) {
-          fetchProfile(session.user.id).then(() => setLoading(false));
+          fetchProfile(session.user).then(() => setLoading(false));
         } else {
           setProfile(null);
           setLoading(false);
@@ -104,7 +122,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const refreshProfile = async () => {
-    if (user) await fetchProfile(user.id);
+    if (user) await fetchProfile(user);
   };
 
   const updateCredits = async (amount: number): Promise<boolean> => {

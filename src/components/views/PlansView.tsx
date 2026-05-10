@@ -44,6 +44,9 @@ export function PlansView() {
 
         {/* Mid Tier */}
         <div className="glass-panel p-8 rounded-3xl flex flex-col relative overflow-hidden border border-orus-gold/30 bg-surface/80 mt-2 mb-2">
+          <div className="absolute top-0 right-0 bg-white/10 text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl tracking-widest uppercase">
+            Mais Popular
+          </div>
           <div className="mb-6">
              <h3 className="text-xl font-display font-semibold mb-2 flex items-center gap-2 text-gray-100">
                Plus <Rocket size={18} className="text-gray-400" />
@@ -75,9 +78,6 @@ export function PlansView() {
 
         {/* Pro Tier */}
         <div className="glass-panel p-8 rounded-3xl flex flex-col relative overflow-hidden border-gradient-gold border-2 bg-gradient-to-b from-orus-gold/5 to-transparent">
-          <div className="absolute top-0 right-0 bg-gradient-to-l from-orus-gold to-orus-amber text-black text-[10px] font-bold px-3 py-1 rounded-bl-xl tracking-widest uppercase">
-            Popular
-          </div>
           
           <div className="absolute -top-24 -right-24 w-48 h-48 bg-orus-gold/20 blur-[60px] rounded-full pointer-events-none" />
 

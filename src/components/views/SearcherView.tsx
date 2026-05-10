@@ -213,7 +213,14 @@ export function SearcherView() {
                          return;
                        }
                        
-                       if (role === 'plus' && val > 50) {
+                       if (role === 'internal_team' && val > 35) {
+                         // No upgrade for internal team, just block
+                         alert('Sua conta internal_team está limitada a 35 leads.');
+                         setLimit(35);
+                         return;
+                       }
+                       
+                       if (role === 'plus' && val > 100) {
                          window.dispatchEvent(new CustomEvent('change-view', { detail: 'plans' }));
                          return;
                        }
@@ -225,9 +232,11 @@ export function SearcherView() {
                      <option value="10">10 Leads</option>
                      <option value="15">15 Leads</option>
                      <option value="20">20 Leads</option>
+                     <option value="35">35 Leads {(profile?.role === 'free') ? '🔒 (Limitado)' : ''}</option>
                      <option value="50">50 Leads {profile?.role === 'free' ? '🔒 (Plano Plus)' : '(Plus+)'}</option>
-                     <option value="100">100 Leads {(profile?.role === 'free' || profile?.role === 'plus') ? '🔒 (Plano Premium)' : '(Premium)'}</option>
-                     <option value="150">150 Leads {(profile?.role === 'free' || profile?.role === 'plus') ? '🔒 (Plano Premium)' : '(Premium)'}</option>
+                     <option value="100">100 Leads {profile?.role === 'free' ? '🔒 (Plano Plus)' : '(Plus+)'}</option>
+                     <option value="250">250 Leads {(profile?.role === 'free' || profile?.role === 'plus' || profile?.role === 'internal_team') ? '🔒 (Plano Premium)' : '(Premium)'}</option>
+                     <option value="350">350 Leads {(profile?.role === 'free' || profile?.role === 'plus' || profile?.role === 'internal_team') ? '🔒 (Plano Premium)' : '(Premium)'}</option>
                    </select>
                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
                      <svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg">

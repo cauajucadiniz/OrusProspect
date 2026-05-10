@@ -35,7 +35,9 @@ export function CRMView() {
   const [cards, setCards] = useState<any[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [leadToDelete, setLeadToDelete] = useState<string | null>(null);
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  
+  const role = profile?.role || 'free';
 
   useEffect(() => {
     fetchLeads();
@@ -54,7 +56,7 @@ export function CRMView() {
         columnId: lead.status === 'new' ? 'Nova Oportunidade' : (lead.status || 'Nova Oportunidade'),
         company: lead.company_name || 'Desconhecido',
         contact: lead.industry || 'Sem Segmento',
-        phone: lead.phone || '', // Using actual phone if exists
+        phone: lead.phone || '', 
         ...lead
       })));
     }
@@ -79,7 +81,6 @@ export function CRMView() {
     const activeId = active.id;
     const overId = over.id;
 
-    // Is it a column or a card
     const isOverColumn = Object.keys(initialColumns).includes(String(overId));
     
     let newColumnId = '';
@@ -129,6 +130,13 @@ export function CRMView() {
     setLeadToDelete(null);
   };
 
+  const handleExport = () => {
+    if (role === 'free') return;
+    
+    // Simulate export
+    alert(`Exportando para ${role === 'premium' ? 'CSV e Excel' : 'CSV'}...`);
+  };
+
   const columns = Object.values(initialColumns).map(col => ({
     ...col,
     cards: cards.filter(c => c.columnId === col.id)
@@ -138,9 +146,22 @@ export function CRMView() {
 
   return (
     <div className="flex flex-col h-full">
-      <header className="mb-6">
-        <h1 className="text-3xl font-display font-medium mb-2">Pipeline de Vendas</h1>
-        <p className="text-gray-400">Arraste e solte para avançar suas negociações.</p>
+      <header className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-display font-medium mb-2">Pipeline de Vendas</h1>
+          <p className="text-gray-400">Arraste e solte para avançar suas negociações.</p>
+        </div>
+        <div>
+          <button 
+            onClick={handleExport}
+            disabled={role === 'free'}
+            className="px-4 py-2 bg-white/5 border border-white/10 hover:bg-white/10 rounded-sm text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wider text-orus-gold flex items-center gap-2"
+            title={role === 'free' ? 'Upgrade necessário para exportar' : 'Exportar Leads'}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Exportar {role === 'premium' ? '(CSV/Excel)' : (role !== 'free' ? '(CSV)' : '')}
+          </button>
+        </div>
       </header>
 
       <div className="flex-1 flex flex-col md:flex-row gap-6 overflow-y-auto md:overflow-x-auto pb-4 custom-scrollbar">
@@ -151,11 +172,11 @@ export function CRMView() {
           onDragEnd={handleDragEnd}
         >
           {columns.map(column => (
-            <KanbanColumn key={column.id} column={column} onDelete={handleDeleteRequest} />
+            <KanbanColumn key={column.id} column={column} onDelete={handleDeleteRequest} role={role} />
           ))}
 
           <DragOverlay>
-            {activeCardData ? <KanbanCard card={activeCardData} isOverlay onDelete={handleDeleteRequest} /> : null}
+            {activeCardData ? <KanbanCard card={activeCardData} isOverlay onDelete={handleDeleteRequest} role={role} /> : null}
           </DragOverlay>
         </DndContext>
       </div>
@@ -183,7 +204,7 @@ export function CRMView() {
   );
 }
 
-function KanbanColumn({ column, onDelete }: any) {
+function KanbanColumn({ column, onDelete, role }: any) {
   const { setNodeRef } = useDroppable({
     id: column.id,
     data: { type: 'Column', column }
@@ -205,7 +226,7 @@ function KanbanColumn({ column, onDelete }: any) {
           strategy={verticalListSortingStrategy}
         >
           {column.cards.map((card: any) => (
-            <SortableCard key={card.id} card={card} onDelete={onDelete} />
+            <SortableCard key={card.id} card={card} onDelete={onDelete} role={role} />
           ))}
           {column.cards.length === 0 && (
              <div className="flex-1 rounded-sm border-2 border-dashed border-white/5 flex items-center justify-center text-sm text-gray-600">
@@ -218,7 +239,7 @@ function KanbanColumn({ column, onDelete }: any) {
   );
 }
 
-function KanbanCard({ card, isOverlay = false, onDelete, dragListeners, dragAttributes }: any) {
+function KanbanCard({ card, isOverlay = false, onDelete, dragListeners, dragAttributes, role }: any) {
   return (
     <div className={`p-4 rounded-xl bg-[#1A1A1A] border ${isOverlay ? 'border-orus-gold shadow-2xl scale-105 rotate-2' : 'border-white/5 shadow-lg'} group hover:border-white/10 transition-colors relative`}>
       <div className="flex justify-between items-start mb-3">
@@ -258,26 +279,28 @@ function KanbanCard({ card, isOverlay = false, onDelete, dragListeners, dragAttr
             <Trash2 size={14} />
           </button>
           
-          {card.phone ? (
-            <a
-              href={(() => {
-                const cleaned = card.phone.replace(/\D/g, '');
-                return cleaned.startsWith('55') 
-                  ? `https://wa.me/${cleaned}` 
-                  : `https://wa.me/55${cleaned}`;
-              })()}
-              target="_blank"
-              rel="noopener noreferrer"
-              onPointerDown={(e) => e.stopPropagation()}
-              className="w-8 h-8 flex flex-shrink-0 items-center justify-center rounded-full bg-green-500 hover:bg-green-400 transition-colors shadow-lg shadow-green-500/20 text-[#111]"
-              title="Chamar no WhatsApp"
-            >
-               <MessageCircle size={14} />
-            </a>
-          ) : (
-            <div className="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 cursor-not-allowed opacity-50 text-gray-500">
-               <MessageCircle size={14} />
-            </div>
+          {role !== 'free' && (
+            card.phone ? (
+              <a
+                href={(() => {
+                  const cleaned = card.phone.replace(/\D/g, '');
+                  return cleaned.startsWith('55') 
+                    ? `https://wa.me/${cleaned}` 
+                    : `https://wa.me/55${cleaned}`;
+                })()}
+                target="_blank"
+                rel="noopener noreferrer"
+                onPointerDown={(e) => e.stopPropagation()}
+                className="w-8 h-8 flex flex-shrink-0 items-center justify-center rounded-full bg-green-500 hover:bg-green-400 transition-colors shadow-lg shadow-green-500/20 text-[#111]"
+                title="Chamar no WhatsApp"
+              >
+                 <MessageCircle size={14} />
+              </a>
+            ) : (
+              <div className="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 cursor-not-allowed opacity-50 text-gray-500">
+                 <MessageCircle size={14} />
+              </div>
+            )
           )}
         </div>
       </div>
@@ -285,7 +308,7 @@ function KanbanCard({ card, isOverlay = false, onDelete, dragListeners, dragAttr
   );
 }
 
-function SortableCard({ card, onDelete }: any) {
+function SortableCard({ card, onDelete, role }: any) {
   const {
     attributes,
     listeners,
@@ -303,7 +326,7 @@ function SortableCard({ card, onDelete }: any) {
 
   return (
     <div ref={setNodeRef} style={style} className="outline-none touch-manipulation">
-      <KanbanCard card={card} onDelete={onDelete} dragListeners={listeners} dragAttributes={attributes} />
+      <KanbanCard card={card} onDelete={onDelete} dragListeners={listeners} dragAttributes={attributes} role={role} />
     </div>
   );
 }
