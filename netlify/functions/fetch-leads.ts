@@ -35,24 +35,12 @@ export const handler: Handler = async (event, context) => {
     };
 
     console.log('Iniciando robô do Apify com input:', input);
-    const run = await client.actor("compass/crawler-google-places").call(input);
-    console.log('Robô finalizado. ID do Dataset:', run.defaultDatasetId);
-
-    const { items } = await client.dataset(run.defaultDatasetId).listItems();
-    
-    const leads = items.map((item: any) => ({
-      user_id: userId,
-      name: item.title || item.name || 'Local Sem Nome',
-      industry: searchTerm,
-      phone: item.phone || item.phoneUnformatted || '',
-      website: item.website || '',
-      address: item.address || item.neighborhood || item.city || location,
-      status: 'Nova Oportunidade',
-    }));
+    const run = await client.actor("compass/crawler-google-places").start(input);
+    console.log('Robô iniciado. ID da execução:', run.id);
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ leads, resultsCount: leads.length })
+      body: JSON.stringify({ runId: run.id })
     };
   } catch (error: any) {
     console.error('Apify API error:', error);

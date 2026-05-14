@@ -63,11 +63,38 @@ export function SearcherView() {
         throw new Error(errorData.error || 'Falha ao buscar leads');
       }
 
-      const data = await response.json();
-      const generatedCount = data.resultsCount;
+      const { runId } = await response.json();
+      
+      let isDone = false;
+      let finalData: any = null;
+
+      while (!isDone) {
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        
+        const statusResponse = await fetch('/.netlify/functions/check-status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ runId, userId: user.id, searchTerm: segment, location }),
+        });
+        
+        if (!statusResponse.ok) {
+          const errorData = await statusResponse.json().catch(() => ({}));
+          throw new Error(errorData.error || 'Falha ao checar status do robô');
+        }
+        
+        const data = await statusResponse.json();
+        if (data.status === 'SUCCEEDED') {
+          isDone = true;
+          finalData = data;
+        } else if (data.status === 'FAILED' || data.status === 'ABORTED' || data.status === 'TIMED-OUT') {
+          throw new Error(`Falha na execução do robô: ${data.status}`);
+        }
+      }
+
+      const generatedCount = finalData.resultsCount;
 
       if (generatedCount > 0) {
-        const resultLeads = data.leads || [];
+        const resultLeads = finalData.leads || [];
         const sortedLeads = resultLeads.sort((a: any, b: any) => {
           const hasPhoneA = Boolean(a.phone);
           const hasPhoneB = Boolean(b.phone);
@@ -150,7 +177,10 @@ export function SearcherView() {
           </h1>
           <p className="text-gray-400">Encontre os leads perfeitos baseados em segmento e localização.</p>
           {profile && (
-            <p className="text-orus-gold text-sm mt-2 font-sans font-medium tracking-normal">Créditos disponíveis: {profile.credits_remaining}</p>
+            <div className="inline-flex items-center gap-2 mt-3 bg-orus-gold/10 border border-orus-gold/20 text-orus-gold px-3 py-1 rounded-full font-sans text-sm font-medium tracking-normal normal-case">
+               <span className="w-2 h-2 rounded-full bg-orus-gold animate-pulse"></span>
+               Créditos disponíveis: {profile.credits_remaining}
+            </div>
           )}
         </div>
       </header>
@@ -311,11 +341,21 @@ export function SearcherView() {
                 <motion.h2 
                   animate={{ opacity: [0.5, 1, 0.5] }}
                   transition={{ repeat: Infinity, duration: 1.5 }}
-                  className="mt-8 text-xl font-display text-orus-gold tracking-widest uppercase"
+                  className="mt-8 text-xl font-display text-orus-gold tracking-widest uppercase text-center"
                 >
                   Robô Apify Trabalhando...
                 </motion.h2>
-                <p className="text-gray-500 mt-2 text-sm uppercase tracking-wider">Aguarde, extraindo leads em tempo real</p>
+                <div className="mt-4 w-64 bg-white/5 rounded-full h-2 overflow-hidden border border-white/10 relative">
+                  <motion.div 
+                    initial={{ width: "0%" }}
+                    animate={{ width: "100%" }}
+                    transition={{ duration: 60, ease: "linear" }}
+                    className="absolute top-0 left-0 h-full bg-orus-gold"
+                  />
+                </div>
+                <p className="text-gray-400 mt-4 text-sm tracking-wide text-center">
+                  O robô está trabalhando na nuvem...<br /> isso pode levar cerca de 1 minuto
+                </p>
               </motion.div>
             )}
 
