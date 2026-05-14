@@ -150,7 +150,7 @@ export function SearcherView() {
           </h1>
           <p className="text-gray-400">Encontre os leads perfeitos baseados em segmento e localização.</p>
           {profile && (
-            <p className="text-orus-gold text-sm mt-2 font-display font-semibold">Créditos disponíveis: {profile.credits_remaining}</p>
+            <p className="text-orus-gold text-sm mt-2 font-sans font-medium tracking-normal">Créditos disponíveis: {profile.credits_remaining}</p>
           )}
         </div>
       </header>
