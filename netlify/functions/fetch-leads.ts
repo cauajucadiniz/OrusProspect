@@ -26,7 +26,7 @@ export const handler: Handler = async (event, context) => {
     // Call Apify Actor
     const input = {
         searchStringsArray: [`${searchTerm} in ${location}`],
-        language: "pt",
+        language: "pt-BR",
         maxCrawledPlacesPerSearch: parseInt(limit) || 10,
         maxImages: 0,
         maxReviews: 0,
