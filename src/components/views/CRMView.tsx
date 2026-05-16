@@ -63,13 +63,70 @@ export function CRMView() {
   };
 
   const sensors = useSensors(
-    useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5,
+        delay: 100,
+        tolerance: 5,
+      },
+    }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
   const handleDragStart = (event: any) => {
     setActiveId(event.active.id);
+  };
+
+  const handleDragOver = (event: any) => {
+    const { active, over } = event;
+    if (!over) return;
+
+    const activeId = active.id;
+    const overId = over.id;
+
+    if (activeId === overId) return;
+
+    const isActiveTask = active.data.current?.type === "Card";
+    const isOverTask = over.data.current?.type === "Card";
+    const isOverColumn = over.data.current?.type === "Column";
+
+    if (!isActiveTask) return;
+
+    // Moving card over another card
+    if (isActiveTask && isOverTask) {
+      setCards((cards) => {
+        const activeIndex = cards.findIndex((t) => t.id === activeId);
+        const overIndex = cards.findIndex((t) => t.id === overId);
+
+        if (cards[activeIndex].columnId !== cards[overIndex].columnId) {
+          const newArray = [...cards];
+          newArray[activeIndex] = {
+            ...cards[activeIndex],
+            columnId: cards[overIndex].columnId,
+          };
+          return arrayMove(newArray, activeIndex, overIndex);
+        }
+
+        return arrayMove(cards, activeIndex, overIndex);
+      });
+    }
+
+    const isOverAColumn = isOverColumn || Object.keys(initialColumns).includes(String(overId));
+
+    // Moving card over a column
+    if (isActiveTask && isOverAColumn) {
+      setCards((cards) => {
+        const activeIndex = cards.findIndex((t) => t.id === activeId);
+        if (cards[activeIndex].columnId === overId) return cards;
+
+        const newArray = [...cards];
+        newArray[activeIndex] = {
+          ...cards[activeIndex],
+          columnId: String(overId),
+        };
+        return arrayMove(newArray, activeIndex, activeIndex);
+      });
+    }
   };
 
   const handleDragEnd = async (event: any) => {
@@ -81,42 +138,10 @@ export function CRMView() {
     const activeId = active.id;
     const overId = over.id;
 
-    const isOverColumn = Object.keys(initialColumns).includes(String(overId));
-    
-    let newColumnId = '';
+    const card = cards.find(c => c.id === activeId);
+    if (!card) return;
 
-    setCards((prev) => {
-      const activeIndex = prev.findIndex((c) => c.id === activeId);
-      const activeCard = prev[activeIndex];
-      
-      if (isOverColumn) {
-        if (activeCard.columnId !== overId) {
-          newColumnId = String(overId);
-          const newArray = [...prev];
-          newArray[activeIndex] = { ...activeCard, columnId: newColumnId };
-          return newArray;
-        }
-        return prev;
-      }
-
-      const overIndex = prev.findIndex((c) => c.id === overId);
-      if (overIndex === -1) return prev;
-      
-      const overCard = prev[overIndex];
-
-      if (activeCard.columnId !== overCard.columnId) {
-         newColumnId = overCard.columnId;
-         const newArray = [...prev];
-         newArray[activeIndex] = { ...activeCard, columnId: newColumnId };
-         return arrayMove(newArray, activeIndex, overIndex);
-      }
-
-      return arrayMove(prev, activeIndex, overIndex);
-    });
-
-    if (newColumnId) {
-      await supabase.from('leads').update({ status: newColumnId }).eq('id', activeId);
-    }
+    await supabase.from('leads').update({ status: card.columnId }).eq('id', activeId);
   };
 
   const handleDeleteRequest = (id: string) => {
@@ -169,6 +194,7 @@ export function CRMView() {
           sensors={sensors} 
           collisionDetection={closestCorners} 
           onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
           onDragEnd={handleDragEnd}
         >
           {columns.map(column => (
@@ -241,9 +267,13 @@ function KanbanColumn({ column, onDelete, role }: any) {
 
 function KanbanCard({ card, isOverlay = false, onDelete, dragListeners, dragAttributes, role }: any) {
   return (
-    <div className={`p-4 rounded-xl bg-[#1A1A1A] border ${isOverlay ? 'border-orus-gold shadow-2xl scale-105 rotate-2' : 'border-white/5 shadow-lg'} group hover:border-white/10 transition-colors relative`}>
+    <div 
+      className={`p-4 rounded-xl bg-[#1A1A1A] border ${isOverlay ? 'border-orus-gold shadow-2xl scale-105 rotate-2 cursor-grabbing' : 'border-white/5 shadow-lg cursor-grab hover:border-white/10'} group transition-colors relative touch-manipulation`}
+      {...dragListeners}
+      {...dragAttributes}
+    >
       <div className="flex justify-between items-start mb-3">
-        <div className="flex items-center gap-3 max-w-[85%] min-w-0">
+        <div className="flex items-center gap-3 max-w-[85%] min-w-0 pointer-events-none">
           <div className="shrink-0 w-10 h-10 rounded-lg bg-black/50 flex items-center justify-center font-display font-bold text-gray-400">
             {card.company?.charAt(0) || 'L'}
           </div>
@@ -252,27 +282,21 @@ function KanbanCard({ card, isOverlay = false, onDelete, dragListeners, dragAttr
             <span className="text-xs text-gray-500 truncate block">{card.contact}</span>
           </div>
         </div>
-        <div className="flex flex-col items-end shrink-0">
-          <button 
-            className="p-1 -mr-2 -mt-1 text-gray-500 hover:text-white transition-opacity cursor-grab touch-none"
-            {...dragListeners}
-            {...dragAttributes}
-          >
-            <GripVertical size={18} />
-          </button>
+        <div className="flex flex-col items-end shrink-0 text-gray-500">
+          <GripVertical size={16} />
         </div>
       </div>
       <div className="pt-3 border-t border-white/5 flex items-center justify-between">
-        <span className="flex items-center gap-1.5 text-xs text-gray-400 truncate pr-2">
+        <span className="flex items-center gap-1.5 text-xs text-gray-400 truncate pr-2 pointer-events-none">
           <Phone size={12} className="text-gray-500 shrink-0" /> <span className="truncate">{card.phone || 'Sem contato'}</span>
         </span>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 shrink-0 z-10">
           <button 
             onClick={(e) => {
                e.stopPropagation();
                if(onDelete) onDelete(card.id);
             }} 
-            className="w-8 h-8 flex items-center justify-center rounded bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20 transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20 transition-colors cursor-pointer"
             onPointerDown={(e) => e.stopPropagation()}
             title="Excluir Lead"
           >
