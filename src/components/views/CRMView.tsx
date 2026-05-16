@@ -1,25 +1,5 @@
 import { useState, useEffect } from 'react';
-import { 
-  DndContext, 
-  DragOverlay, 
-  closestCorners, 
-  KeyboardSensor, 
-  PointerSensor,
-  MouseSensor,
-  TouchSensor,
-  useSensor, 
-  useSensors,
-  useDroppable
-} from '@dnd-kit/core';
-import { 
-  arrayMove, 
-  SortableContext, 
-  sortableKeyboardCoordinates, 
-  verticalListSortingStrategy 
-} from '@dnd-kit/sortable';
-import { useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-import { Phone, MessageCircle, GripVertical, Trash2 } from 'lucide-react';
+import { Phone, MessageCircle, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
@@ -33,7 +13,6 @@ const initialColumns = {
 
 export function CRMView() {
   const [cards, setCards] = useState<any[]>([]);
-  const [activeId, setActiveId] = useState<string | null>(null);
   const [leadToDelete, setLeadToDelete] = useState<string | null>(null);
   const { user, profile } = useAuth();
   
@@ -62,86 +41,24 @@ export function CRMView() {
     }
   };
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 5,
-        delay: 100,
-        tolerance: 5,
-      },
-    }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-  );
-
-  const handleDragStart = (event: any) => {
-    setActiveId(event.active.id);
-  };
-
-  const handleDragOver = (event: any) => {
-    const { active, over } = event;
-    if (!over) return;
-
-    const activeId = active.id;
-    const overId = over.id;
-
-    if (activeId === overId) return;
-
-    const isActiveTask = active.data.current?.type === "Card";
-    const isOverTask = over.data.current?.type === "Card";
-    const isOverColumn = over.data.current?.type === "Column";
-
-    if (!isActiveTask) return;
-
-    // Moving card over another card
-    if (isActiveTask && isOverTask) {
-      setCards((cards) => {
-        const activeIndex = cards.findIndex((t) => t.id === activeId);
-        const overIndex = cards.findIndex((t) => t.id === overId);
-
-        if (cards[activeIndex].columnId !== cards[overIndex].columnId) {
-          const newArray = [...cards];
-          newArray[activeIndex] = {
-            ...cards[activeIndex],
-            columnId: cards[overIndex].columnId,
-          };
-          return arrayMove(newArray, activeIndex, overIndex);
-        }
-
-        return arrayMove(cards, activeIndex, overIndex);
-      });
-    }
-
-    const isOverAColumn = isOverColumn || Object.keys(initialColumns).includes(String(overId));
-
-    // Moving card over a column
-    if (isActiveTask && isOverAColumn) {
-      setCards((cards) => {
-        const activeIndex = cards.findIndex((t) => t.id === activeId);
-        if (cards[activeIndex].columnId === overId) return cards;
-
-        const newArray = [...cards];
-        newArray[activeIndex] = {
-          ...cards[activeIndex],
-          columnId: String(overId),
-        };
-        return arrayMove(newArray, activeIndex, activeIndex);
-      });
-    }
-  };
-
-  const handleDragEnd = async (event: any) => {
-    const { active, over } = event;
-    setActiveId(null);
-
-    if (!over) return;
-
-    const activeId = active.id;
-    const overId = over.id;
-
-    const card = cards.find(c => c.id === activeId);
+  const handleMoveCard = async (cardId: string, direction: 'prev' | 'next') => {
+    const card = cards.find(c => c.id === cardId);
     if (!card) return;
 
-    await supabase.from('leads').update({ status: card.columnId }).eq('id', activeId);
+    const columnsArray = Object.keys(initialColumns);
+    const currentIndex = columnsArray.indexOf(card.columnId);
+    if (currentIndex === -1) return;
+
+    let newIndex = currentIndex;
+    if (direction === 'prev' && currentIndex > 0) newIndex--;
+    if (direction === 'next' && currentIndex < columnsArray.length - 1) newIndex++;
+
+    if (newIndex !== currentIndex) {
+      const newColumnId = columnsArray[newIndex];
+      // Optimistic update
+      setCards(prev => prev.map(c => c.id === cardId ? { ...c, columnId: newColumnId } : c));
+      await supabase.from('leads').update({ status: newColumnId }).eq('id', cardId);
+    }
   };
 
   const handleDeleteRequest = (id: string) => {
@@ -167,14 +84,12 @@ export function CRMView() {
     cards: cards.filter(c => c.columnId === col.id)
   }));
 
-  const activeCardData = activeId ? cards.find(c => c.id === activeId) : null;
-
   return (
     <div className="flex flex-col h-full">
       <header className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-display font-medium mb-2">Pipeline de Vendas</h1>
-          <p className="text-gray-400">Arraste e solte para avançar suas negociações.</p>
+          <p className="text-gray-400">Avance ou retroceda suas negociações utilizando os botões de ação do cartão.</p>
         </div>
         <div>
           <button 
@@ -190,21 +105,9 @@ export function CRMView() {
       </header>
 
       <div className="flex-1 flex flex-col md:flex-row gap-6 overflow-y-auto md:overflow-x-auto pb-4 custom-scrollbar">
-        <DndContext 
-          sensors={sensors} 
-          collisionDetection={closestCorners} 
-          onDragStart={handleDragStart}
-          onDragOver={handleDragOver}
-          onDragEnd={handleDragEnd}
-        >
           {columns.map(column => (
-            <KanbanColumn key={column.id} column={column} onDelete={handleDeleteRequest} role={role} />
+            <KanbanColumn key={column.id} column={column} onDelete={handleDeleteRequest} onMove={handleMoveCard} role={role} />
           ))}
-
-          <DragOverlay>
-            {activeCardData ? <KanbanCard card={activeCardData} isOverlay onDelete={handleDeleteRequest} role={role} /> : null}
-          </DragOverlay>
-        </DndContext>
       </div>
 
       <AnimatePresence>
@@ -230,12 +133,7 @@ export function CRMView() {
   );
 }
 
-function KanbanColumn({ column, onDelete, role }: any) {
-  const { setNodeRef } = useDroppable({
-    id: column.id,
-    data: { type: 'Column', column }
-  });
-
+function KanbanColumn({ column, onDelete, onMove, role }: any) {
   return (
     <div className="w-full md:min-w-[320px] md:w-[320px] flex flex-col glass-card rounded-sm bg-surface/30">
       <div className="p-4 border-b border-white/5 flex items-center justify-between">
@@ -245,35 +143,27 @@ function KanbanColumn({ column, onDelete, role }: any) {
         </span>
       </div>
       
-      <div ref={setNodeRef} className="flex-1 p-3 flex flex-col gap-3 min-h-[150px]">
-        <SortableContext 
-          id={column.id}
-          items={column.cards.map((c: any) => c.id)} 
-          strategy={verticalListSortingStrategy}
-        >
+      <div className="flex-1 p-3 flex flex-col gap-3 min-h-[150px]">
           {column.cards.map((card: any) => (
-            <SortableCard key={card.id} card={card} onDelete={onDelete} role={role} />
+            <KanbanCard key={card.id} card={card} onDelete={onDelete} onMove={onMove} role={role} />
           ))}
           {column.cards.length === 0 && (
              <div className="flex-1 rounded-sm border-2 border-dashed border-white/5 flex items-center justify-center text-sm text-gray-600">
-               Solte aqui
+               Nenhum lead nesta etapa
              </div>
           )}
-        </SortableContext>
       </div>
     </div>
   );
 }
 
-function KanbanCard({ card, isOverlay = false, onDelete, dragListeners, dragAttributes, role }: any) {
+function KanbanCard({ card, onDelete, onMove, role }: any) {
   return (
     <div 
-      className={`p-4 rounded-xl bg-[#1A1A1A] border ${isOverlay ? 'border-orus-gold shadow-2xl scale-105 rotate-2 cursor-grabbing' : 'border-white/5 shadow-lg cursor-grab hover:border-white/10'} group transition-colors relative touch-manipulation`}
-      {...dragListeners}
-      {...dragAttributes}
+      className="p-4 rounded-xl bg-[#1A1A1A] border border-white/5 shadow-lg group hover:border-white/10 transition-colors relative"
     >
       <div className="flex justify-between items-start mb-3">
-        <div className="flex items-center gap-3 max-w-[85%] min-w-0 pointer-events-none">
+        <div className="flex items-center gap-3 w-full min-w-0">
           <div className="shrink-0 w-10 h-10 rounded-lg bg-black/50 flex items-center justify-center font-display font-bold text-gray-400">
             {card.company?.charAt(0) || 'L'}
           </div>
@@ -282,15 +172,31 @@ function KanbanCard({ card, isOverlay = false, onDelete, dragListeners, dragAttr
             <span className="text-xs text-gray-500 truncate block">{card.contact}</span>
           </div>
         </div>
-        <div className="flex flex-col items-end shrink-0 text-gray-500">
-          <GripVertical size={16} />
-        </div>
       </div>
       <div className="pt-3 border-t border-white/5 flex items-center justify-between">
-        <span className="flex items-center gap-1.5 text-xs text-gray-400 truncate pr-2 pointer-events-none">
+        <span className="flex items-center gap-1.5 text-xs text-gray-400 truncate pr-2">
           <Phone size={12} className="text-gray-500 shrink-0" /> <span className="truncate">{card.phone || 'Sem contato'}</span>
         </span>
         <div className="flex items-center gap-2 shrink-0 z-10">
+          {onMove && (
+            <div className="flex bg-white/5 rounded-full border border-white/10 mr-1">
+              <button 
+                onClick={(e) => { e.stopPropagation(); onMove(card.id, 'prev'); }}
+                className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white transition-colors"
+                title="Voltar Processo"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <div className="w-[1px] bg-white/10"></div>
+              <button 
+                onClick={(e) => { e.stopPropagation(); onMove(card.id, 'next'); }}
+                className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white transition-colors"
+                title="Avançar Processo"
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          )}
           <button 
             onClick={(e) => {
                e.stopPropagation();
@@ -314,7 +220,6 @@ function KanbanCard({ card, isOverlay = false, onDelete, dragListeners, dragAttr
                 })()}
                 target="_blank"
                 rel="noopener noreferrer"
-                onPointerDown={(e) => e.stopPropagation()}
                 className="w-8 h-8 flex flex-shrink-0 items-center justify-center rounded-full bg-green-500 hover:bg-green-400 transition-colors shadow-lg shadow-green-500/20 text-[#111]"
                 title="Chamar no WhatsApp"
               >
@@ -328,29 +233,6 @@ function KanbanCard({ card, isOverlay = false, onDelete, dragListeners, dragAttr
           )}
         </div>
       </div>
-    </div>
-  );
-}
-
-function SortableCard({ card, onDelete, role }: any) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging
-  } = useSortable({ id: card.id, data: { type: 'Card', card } });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.4 : 1,
-  };
-
-  return (
-    <div ref={setNodeRef} style={style} className="outline-none touch-manipulation">
-      <KanbanCard card={card} onDelete={onDelete} dragListeners={listeners} dragAttributes={attributes} role={role} />
     </div>
   );
 }
