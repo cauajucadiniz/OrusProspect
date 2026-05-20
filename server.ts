@@ -13,7 +13,7 @@ async function startServer() {
   app.post('/.netlify/functions/fetch-leads', async (req, res) => {
     try {
       const { searchTerm, location, userId, limit } = req.body;
-      const apifyToken = process.env.APIFY_API_TOKEN;
+      const apifyToken = process.env.APIFY_API_TOKEN || process.env.VITE_APIFY_API_TOKEN;
 
       if (!apifyToken) {
         return res.status(500).json({ error: 'A chave da API do Apify não está configurada (APIFY_API_TOKEN).' });
@@ -52,7 +52,7 @@ async function startServer() {
   app.post('/.netlify/functions/check-status', async (req, res) => {
     try {
       const { runId, userId, searchTerm, location } = req.body;
-      const apifyToken = process.env.APIFY_API_TOKEN;
+      const apifyToken = process.env.APIFY_API_TOKEN || process.env.VITE_APIFY_API_TOKEN;
 
       if (!apifyToken) {
         return res.status(500).json({ error: 'A chave da API do Apify não está configurada.' });

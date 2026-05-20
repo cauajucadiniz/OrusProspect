@@ -9,7 +9,7 @@ export const handler: Handler = async (event, context) => {
   try {
     const body = event.body ? JSON.parse(event.body) : {};
     const { runId, userId, searchTerm, location } = body;
-    const apifyToken = process.env.APIFY_API_TOKEN;
+    const apifyToken = process.env.APIFY_API_TOKEN || process.env.VITE_APIFY_API_TOKEN;
 
     if (!apifyToken) {
       return { statusCode: 500, body: JSON.stringify({ error: 'A chave da API do Apify não está configurada.' }) };
