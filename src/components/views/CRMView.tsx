@@ -91,27 +91,30 @@ export function CRMView() {
     });
   };
 
+  const downloadCSV = () => {
+    const formattedData = formatDataForExport();
+    const csvHeader = "sep=;\n\"Nome\";\"Segmento\";\"Telefone\"\n";
+    const csvContent = formattedData.map(r => `"${r.Nome}";"${r.Segmento}";="\t${r.Telefone}"`).join("\n");
+    const blob = new Blob(['\ufeff', csvHeader, csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", "leads_export.csv");
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handleSyncSheets = async () => {
     if (role === 'free') return;
     
-    const formattedData = formatDataForExport();
-
     if (!webhookUrl) {
-      // Download CSV
-      const csvHeader = "\uFEFFNome,Segmento,Telefone\n";
-      const csvContent = formattedData.map(r => `"${r.Nome}","${r.Segmento}","${r.Telefone}"`).join("\n");
-      const blob = new Blob([csvHeader + csvContent], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement("a");
-      const url = URL.createObjectURL(blob);
-      link.setAttribute("href", url);
-      link.setAttribute("download", "leads_export.csv");
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      downloadCSV();
       return;
     }
 
+    const formattedData = formatDataForExport();
     setIsSyncing(true);
     try {
       const response = await fetch(webhookUrl, {
@@ -139,9 +142,7 @@ export function CRMView() {
 
   const handleExport = () => {
     if (role === 'free') return;
-    
-    // Simulate export
-    alert(`Exportando para ${role === 'premium' ? 'CSV e Excel' : 'CSV'}...`);
+    downloadCSV();
   };
 
   const columns = Object.values(initialColumns).map(col => ({
@@ -216,7 +217,7 @@ export function CRMView() {
         )}
 
         {showWebhookModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="fixed inset-0 z-[100] flex items-start justify-center pt-24 bg-black/60 backdrop-blur-sm p-4">
             <motion.div 
                initial={{ opacity: 0, scale: 0.95 }}
                animate={{ opacity: 1, scale: 1 }}
