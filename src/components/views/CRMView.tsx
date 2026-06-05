@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Phone, MessageCircle, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Phone, MessageCircle, Trash2, ChevronLeft, ChevronRight, Settings } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
@@ -14,6 +14,11 @@ const initialColumns = {
 export function CRMView() {
   const [cards, setCards] = useState<any[]>([]);
   const [leadToDelete, setLeadToDelete] = useState<string | null>(null);
+  const [webhookUrl, setWebhookUrl] = useState(() => localStorage.getItem('n8n_webhook_url') || '');
+  const [showWebhookModal, setShowWebhookModal] = useState(false);
+  const [tempWebhookUrl, setTempWebhookUrl] = useState(webhookUrl);
+  const [isSyncing, setIsSyncing] = useState(false);
+
   const { user, profile } = useAuth();
   
   const role = profile?.role || 'free';
@@ -72,6 +77,66 @@ export function CRMView() {
     setLeadToDelete(null);
   };
 
+  const formatDataForExport = () => {
+    return cards.map(c => {
+      let p = c.phone ? c.phone.replace(/\D/g, '') : '';
+      if (p && !p.startsWith('55')) {
+        p = '55' + p;
+      }
+      return {
+        Nome: c.company || '',
+        Segmento: c.contact || '',
+        Telefone: p ? '+' + p : ''
+      };
+    });
+  };
+
+  const handleSyncSheets = async () => {
+    if (role === 'free') return;
+    
+    const formattedData = formatDataForExport();
+
+    if (!webhookUrl) {
+      // Download CSV
+      const csvHeader = "\uFEFFNome,Segmento,Telefone\n";
+      const csvContent = formattedData.map(r => `"${r.Nome}","${r.Segmento}","${r.Telefone}"`).join("\n");
+      const blob = new Blob([csvHeader + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", "leads_export.csv");
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      return;
+    }
+
+    setIsSyncing(true);
+    try {
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ leads: formattedData })
+      });
+      if (response.ok) {
+        alert("Leads sincronizados com o Google Sheets com sucesso!");
+      } else {
+        alert("Erro ao sincronizar. Verifique a URL do webhook no seu n8n.");
+      }
+    } catch (e) {
+      alert("Erro ao sincronizar. Falha na conexão com o Webhook.");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const saveWebhook = () => {
+    setWebhookUrl(tempWebhookUrl);
+    localStorage.setItem('n8n_webhook_url', tempWebhookUrl);
+    setShowWebhookModal(false);
+  };
+
   const handleExport = () => {
     if (role === 'free') return;
     
@@ -91,11 +156,32 @@ export function CRMView() {
           <h1 className="text-3xl font-display font-medium mb-2">Pipeline de Vendas</h1>
           <p className="text-gray-400">Avance ou retroceda suas negociações utilizando os botões de ação do cartão.</p>
         </div>
-        <div>
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => {
+              setTempWebhookUrl(webhookUrl);
+              setShowWebhookModal(true);
+            }}
+            className="p-2 bg-white/5 border border-white/10 hover:bg-white/10 rounded-sm text-gray-400 hover:text-white transition-colors"
+            title="Configurações de Integração"
+          >
+            <Settings size={20} />
+          </button>
+          
+          <button 
+            onClick={handleSyncSheets}
+            disabled={role === 'free' || isSyncing}
+            className="px-4 py-2 bg-orus-gold/10 border border-orus-gold/20 hover:bg-orus-gold/20 rounded-sm text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wider text-orus-gold flex items-center gap-2"
+            title={role === 'free' ? 'Upgrade necessário' : 'Sincronizar com Google Sheets via n8n'}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            {isSyncing ? 'Sincronizando...' : 'Sincronizar Google Sheets'}
+          </button>
+
           <button 
             onClick={handleExport}
             disabled={role === 'free'}
-            className="px-4 py-2 bg-white/5 border border-white/10 hover:bg-white/10 rounded-sm text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wider text-orus-gold flex items-center gap-2"
+            className="px-4 py-2 bg-white/5 border border-white/10 hover:bg-white/10 rounded-sm text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wider text-white flex items-center gap-2"
             title={role === 'free' ? 'Upgrade necessário para exportar' : 'Exportar Leads'}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -124,6 +210,36 @@ export function CRMView() {
               <div className="flex justify-end gap-3">
                 <button onClick={() => setLeadToDelete(null)} className="px-4 py-2 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 transition-colors">Cancelar</button>
                 <button onClick={confirmDelete} className="px-4 py-2 rounded-lg text-sm font-medium bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20 transition-colors">Confirmar Exclusão</button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {showWebhookModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <motion.div 
+               initial={{ opacity: 0, scale: 0.95 }}
+               animate={{ opacity: 1, scale: 1 }}
+               exit={{ opacity: 0, scale: 0.95 }}
+               className="bg-[#111] border border-orus-gold/30 rounded-2xl p-6 max-w-md w-full shadow-2xl relative"
+            >
+              <h3 className="text-xl font-display font-medium text-white mb-2">Integração n8n / Sheets</h3>
+              <p className="text-gray-400 text-sm mb-6">Insira a URL do Webhook do seu fluxo n8n. Quando configurado, a sincronização enviará os dados em tempo real para o webhook. Se deixado em branco, a sincronização baixará um arquivo CSV formatado.</p>
+              
+              <div className="mb-6">
+                <label className="block text-xs font-medium text-gray-400 mb-2 uppercase tracking-widest">Webhook URL</label>
+                <input 
+                  type="url"
+                  placeholder="https://seu-n8n.com/webhook/..."
+                  value={tempWebhookUrl}
+                  onChange={e => setTempWebhookUrl(e.target.value)}
+                  className="w-full bg-[#1A1A1A] border border-white/10 rounded-sm px-4 py-3 text-white focus:outline-none focus:border-orus-gold/50 transition-colors"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <button onClick={() => setShowWebhookModal(false)} className="px-4 py-2 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 transition-colors">Cancelar</button>
+                <button onClick={saveWebhook} className="px-4 py-2 rounded-lg text-sm font-medium bg-orus-gold/10 text-orus-gold hover:bg-orus-gold/20 border border-orus-gold/20 transition-colors">Salvar Configurações</button>
               </div>
             </motion.div>
           </div>
