@@ -30,7 +30,7 @@ export const handler: Handler = async (event, context) => {
     }
 
     if (run.status === 'SUCCEEDED') {
-      const { items } = await client.dataset(run.defaultDatasetId).listItems();
+      const { items } = await client.dataset(run.defaultDatasetId).listItems({ limit: 1000, clean: true });
       
       const leads = items.map((item: any) => ({
         user_id: userId,

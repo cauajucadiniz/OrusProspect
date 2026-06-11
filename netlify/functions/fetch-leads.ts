@@ -28,10 +28,14 @@ export const handler: Handler = async (event, context) => {
         searchStringsArray: [`${searchTerm} in ${location}`],
         language: "pt-BR",
         maxCrawledPlacesPerSearch: parseInt(limit) || 10,
+        maxCrawledPlaces: parseInt(limit) || 10,
         maxImages: 0,
         maxReviews: 0,
         scrapeReviewers: false,
         scrapeImages: false,
+        proxyConfig: {
+          useApifyProxy: true
+        }
     };
 
     console.log('Iniciando robô do Apify com input:', input);

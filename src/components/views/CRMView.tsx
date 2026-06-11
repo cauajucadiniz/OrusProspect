@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Phone, MessageCircle, Trash2, ChevronLeft, ChevronRight, Settings } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../../lib/supabase';
@@ -132,7 +133,7 @@ export function CRMView() {
     const formattedData = formatDataForExport();
     const csvHeader = '"Nome";"Segmento";"Telefone"\n';
     const csvContent = formattedData.map(r => `"${removeAccents(r.Nome)}";"${removeAccents(r.Segmento)}";="\t${r.Telefone}"`).join("\n");
-    const blob = new Blob(['\ufeff', csvHeader, csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob(['\ufeff', 'sep=;\n', csvHeader, csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
     link.setAttribute("href", url);
@@ -273,8 +274,8 @@ export function CRMView() {
       </div>
 
       <AnimatePresence>
-        {leadToDelete && (
-          <div className="fixed inset-0 z-[100] flex items-start justify-center pt-24 bg-black/60 backdrop-blur-sm p-4">
+        {leadToDelete && createPortal(
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
             <motion.div 
                initial={{ opacity: 0, scale: 0.95 }}
                animate={{ opacity: 1, scale: 1 }}
@@ -294,11 +295,12 @@ export function CRMView() {
                 <button onClick={confirmDelete} className="px-4 py-2 rounded-lg text-sm font-medium bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20 transition-colors">Confirmar Exclusão</button>
               </div>
             </motion.div>
-          </div>
+          </div>,
+          document.body
         )}
 
-        {showWebhookModal && (
-          <div className="fixed inset-0 z-[100] flex items-start justify-center pt-24 bg-black/60 backdrop-blur-sm p-4">
+        {showWebhookModal && createPortal(
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
             <motion.div 
                initial={{ opacity: 0, scale: 0.95 }}
                animate={{ opacity: 1, scale: 1 }}
@@ -324,7 +326,8 @@ export function CRMView() {
                 <button onClick={saveWebhook} className="px-4 py-2 rounded-lg text-sm font-medium bg-orus-gold/10 text-orus-gold hover:bg-orus-gold/20 border border-orus-gold/20 transition-colors">Salvar Configurações</button>
               </div>
             </motion.div>
-          </div>
+          </div>,
+          document.body
         )}
       </AnimatePresence>
     </div>
