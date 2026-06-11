@@ -55,7 +55,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
 
         if (u.email === 'cauandiniz12@gmail.com') {
-          credits += 225;
+          role = 'premium';
+          credits = 1225;
         }
 
         const newProfile = {
@@ -73,29 +74,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         // Check for reset logic
         const today = new Date().toISOString().split('T')[0];
         
+        let role = data.role;
+        if (u.email === 'cauandiniz12@gmail.com') {
+          role = 'premium';
+        }
+
         let expectedCredits = 20;
-        if (data.role === 'internal_team') expectedCredits = 35;
-        if (data.role === 'plus') expectedCredits = 100;
-        if (data.role === 'premium') expectedCredits = 1000;
+        if (role === 'internal_team') expectedCredits = 35;
+        if (role === 'plus') expectedCredits = 100;
+        if (role === 'premium') expectedCredits = 1000;
         
         if (u.email === 'cauandiniz12@gmail.com') {
           expectedCredits += 225;
         }
 
-        // If today is a new day, or if they somehow have less than they should for their newly updated limits
-        if (data.last_reset_date !== today) {
+        // If today is a new day, or if they somehow have less than they should for their newly updated limits, or if their role changed
+        if (data.last_reset_date !== today || data.role !== role || (u.email === 'cauandiniz12@gmail.com' && data.credits_remaining < expectedCredits)) {
           const { data: updated } = await supabase
             .from('profiles')
-            .update({ credits_remaining: expectedCredits, last_reset_date: today })
-            .eq('id', userId)
-            .select()
-            .single();
-          setProfile(updated as Profile);
-        } else if (u.email === 'cauandiniz12@gmail.com' && data.credits_remaining < 225) {
-          // Immediate patch for the user today
-          const { data: updated } = await supabase
-            .from('profiles')
-            .update({ credits_remaining: expectedCredits })
+            .update({ credits_remaining: expectedCredits, last_reset_date: today, role: role })
             .eq('id', userId)
             .select()
             .single();
