@@ -54,6 +54,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           credits = 35;
         }
 
+        if (u.email === 'cauandiniz12@gmail.com') {
+          credits += 225;
+        }
+
         const newProfile = {
           id: userId,
           role: role,
@@ -68,15 +72,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (data) {
         // Check for reset logic
         const today = new Date().toISOString().split('T')[0];
+        
+        let expectedCredits = 20;
+        if (data.role === 'internal_team') expectedCredits = 35;
+        if (data.role === 'plus') expectedCredits = 100;
+        if (data.role === 'premium') expectedCredits = 1000;
+        
+        if (u.email === 'cauandiniz12@gmail.com') {
+          expectedCredits += 225;
+        }
+
+        // If today is a new day, or if they somehow have less than they should for their newly updated limits
         if (data.last_reset_date !== today) {
-          let newCredits = 20;
-          if (data.role === 'internal_team') newCredits = 35;
-          if (data.role === 'plus') newCredits = 100;
-          if (data.role === 'premium') newCredits = 1000;
-          
           const { data: updated } = await supabase
             .from('profiles')
-            .update({ credits_remaining: newCredits, last_reset_date: today })
+            .update({ credits_remaining: expectedCredits, last_reset_date: today })
+            .eq('id', userId)
+            .select()
+            .single();
+          setProfile(updated as Profile);
+        } else if (u.email === 'cauandiniz12@gmail.com' && data.credits_remaining < 225) {
+          // Immediate patch for the user today
+          const { data: updated } = await supabase
+            .from('profiles')
+            .update({ credits_remaining: expectedCredits })
             .eq('id', userId)
             .select()
             .single();

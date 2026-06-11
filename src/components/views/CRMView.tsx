@@ -18,6 +18,7 @@ export function CRMView() {
   const [showWebhookModal, setShowWebhookModal] = useState(false);
   const [tempWebhookUrl, setTempWebhookUrl] = useState(webhookUrl);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
 
   const { user, profile } = useAuth();
   
@@ -71,10 +72,41 @@ export function CRMView() {
   };
 
   const confirmDelete = async () => {
-    if (!leadToDelete) return;
-    setCards(prev => prev.filter(c => c.id !== leadToDelete));
-    await supabase.from('leads').delete().eq('id', leadToDelete);
-    setLeadToDelete(null);
+    if (leadToDelete === 'mass') {
+      const idsToDelete = [...selectedLeads];
+      setCards(prev => prev.filter(c => !idsToDelete.includes(c.id)));
+      setSelectedLeads([]);
+      setLeadToDelete(null);
+      await supabase.from('leads').delete().in('id', idsToDelete);
+    } else if (leadToDelete) {
+      setCards(prev => prev.filter(c => c.id !== leadToDelete));
+      setSelectedLeads(prev => prev.filter(id => id !== leadToDelete));
+      await supabase.from('leads').delete().eq('id', leadToDelete);
+      setLeadToDelete(null);
+    }
+  };
+
+  const toggleLeadSelection = (id: string) => {
+    setSelectedLeads(prev => prev.includes(id) ? prev.filter(l => l !== id) : [...prev, id]);
+  };
+
+  const selectAllInColumn = (leadIds: string[]) => {
+    if (leadIds.length === 0) return;
+    const allSelected = leadIds.every(id => selectedLeads.includes(id));
+    if (allSelected) {
+      setSelectedLeads(prev => prev.filter(id => !leadIds.includes(id)));
+    } else {
+      const newSelected = [...selectedLeads, ...leadIds.filter(id => !selectedLeads.includes(id))];
+      setSelectedLeads(newSelected);
+    }
+  };
+
+  const handleMassMove = async (newColumnId: string) => {
+    if (selectedLeads.length === 0) return;
+    const idsToMove = [...selectedLeads];
+    setCards(prev => prev.map(c => idsToMove.includes(c.id) ? { ...c, columnId: newColumnId } : c));
+    setSelectedLeads([]);
+    await supabase.from('leads').update({ status: newColumnId }).in('id', idsToMove);
   };
 
   const formatDataForExport = () => {
@@ -91,10 +123,15 @@ export function CRMView() {
     });
   };
 
+  const removeAccents = (str: string) => {
+    if (!str) return '';
+    return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  };
+
   const downloadCSV = () => {
     const formattedData = formatDataForExport();
-    const csvHeader = "sep=;\n\"Nome\";\"Segmento\";\"Telefone\"\n";
-    const csvContent = formattedData.map(r => `"${r.Nome}";"${r.Segmento}";="\t${r.Telefone}"`).join("\n");
+    const csvHeader = '"Nome";"Segmento";"Telefone"\n';
+    const csvContent = formattedData.map(r => `"${removeAccents(r.Nome)}";"${removeAccents(r.Segmento)}";="\t${r.Telefone}"`).join("\n");
     const blob = new Blob(['\ufeff', csvHeader, csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
@@ -157,6 +194,35 @@ export function CRMView() {
           <h1 className="text-3xl font-display font-medium mb-2">Pipeline de Vendas</h1>
           <p className="text-gray-400">Avance ou retroceda suas negociações utilizando os botões de ação do cartão.</p>
         </div>
+        
+        {selectedLeads.length > 0 && (
+          <div className="fixed bottom-4 left-1/2 -translate-x-1/2 md:static md:translate-x-0 bg-orus-gold/10 border border-orus-gold/30 rounded-full px-4 py-2 flex items-center gap-4 z-50 backdrop-blur-md shadow-2xl">
+            <span className="text-xs font-bold text-orus-gold">{selectedLeads.length} selecionados</span>
+            <div className="h-4 w-[1px] bg-orus-gold/20"></div>
+            
+            <div className="flex items-center gap-2">
+              <select 
+                onChange={(e) => e.target.value && handleMassMove(e.target.value)}
+                value=""
+                className="bg-[#111] border border-white/10 text-xs rounded-sm px-2 py-1 text-white hover:border-orus-gold/50 transition-colors focus:outline-none"
+              >
+                <option value="" disabled>Mover para...</option>
+                {Object.values(initialColumns).map(col => (
+                  <option key={col.id} value={col.id}>{col.title}</option>
+                ))}
+              </select>
+            </div>
+
+            <button 
+              onClick={() => setLeadToDelete('mass')}
+              className="text-white hover:text-red-400 bg-white/5 hover:bg-white/10 p-1.5 rounded-sm transition-colors flex items-center gap-1 text-xs"
+              title="Excluir selecionados"
+            >
+              <Trash2 size={14} /> <span className="hidden sm:inline">Excluir</span>
+            </button>
+          </div>
+        )}
+
         <div className="flex items-center gap-3">
           <button 
             onClick={() => {
@@ -193,21 +259,36 @@ export function CRMView() {
 
       <div className="flex-1 flex flex-col md:flex-row gap-6 overflow-y-auto md:overflow-x-auto pb-4 custom-scrollbar">
           {columns.map(column => (
-            <KanbanColumn key={column.id} column={column} onDelete={handleDeleteRequest} onMove={handleMoveCard} role={role} />
+            <KanbanColumn 
+              key={column.id} 
+              column={column} 
+              onDelete={handleDeleteRequest} 
+              onMove={handleMoveCard} 
+              role={role} 
+              selectedLeads={selectedLeads}
+              onToggleSelect={toggleLeadSelection}
+              onSelectAll={selectAllInColumn}
+            />
           ))}
       </div>
 
       <AnimatePresence>
         {leadToDelete && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="fixed inset-0 z-[100] flex items-start justify-center pt-24 bg-black/60 backdrop-blur-sm p-4">
             <motion.div 
                initial={{ opacity: 0, scale: 0.95 }}
                animate={{ opacity: 1, scale: 1 }}
                exit={{ opacity: 0, scale: 0.95 }}
                className="bg-[#111] border border-orus-gold/30 rounded-2xl p-6 max-w-sm w-full shadow-2xl relative"
             >
-              <h3 className="text-xl font-display font-medium text-white mb-2">Excluir Lead</h3>
-              <p className="text-gray-400 text-sm mb-6">Tem certeza que deseja excluir este lead? Esta ação não pode ser desfeita.</p>
+              <h3 className="text-xl font-display font-medium text-white mb-2">
+                {leadToDelete === 'mass' ? `Excluir ${selectedLeads.length} leads` : 'Excluir Lead'}
+              </h3>
+              <p className="text-gray-400 text-sm mb-6">
+                {leadToDelete === 'mass' 
+                  ? 'Tem certeza que deseja excluir os leads selecionados? Esta ação não pode ser desfeita.' 
+                  : 'Tem certeza que deseja excluir este lead? Esta ação não pode ser desfeita.'}
+              </p>
               <div className="flex justify-end gap-3">
                 <button onClick={() => setLeadToDelete(null)} className="px-4 py-2 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 transition-colors">Cancelar</button>
                 <button onClick={confirmDelete} className="px-4 py-2 rounded-lg text-sm font-medium bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20 transition-colors">Confirmar Exclusão</button>
@@ -250,11 +331,26 @@ export function CRMView() {
   );
 }
 
-function KanbanColumn({ column, onDelete, onMove, role }: any) {
+function KanbanColumn({ column, onDelete, onMove, role, selectedLeads, onToggleSelect, onSelectAll }: any) {
+  const cardIds = column.cards.map((c: any) => c.id);
+  const allSelected = cardIds.length > 0 && cardIds.every((id: string) => selectedLeads.includes(id));
+  const someSelected = cardIds.some((id: string) => selectedLeads.includes(id));
+
   return (
     <div className="w-full md:min-w-[320px] md:w-[320px] flex flex-col glass-card rounded-sm bg-surface/30">
       <div className="p-4 border-b border-white/5 flex items-center justify-between">
-        <h3 className="font-display font-medium text-gray-200 uppercase tracking-widest">{column.title}</h3>
+        <div className="flex items-center gap-2">
+          {cardIds.length > 0 && (
+            <input 
+              type="checkbox" 
+              checked={allSelected}
+              ref={el => { if (el) el.indeterminate = someSelected && !allSelected }}
+              onChange={() => onSelectAll(cardIds)}
+              className="w-4 h-4 rounded border-gray-600 bg-white/5 text-orus-gold focus:ring-orus-gold focus:ring-offset-gray-900"
+            />
+          )}
+          <h3 className="font-display font-medium text-gray-200 uppercase tracking-widest leading-none">{column.title}</h3>
+        </div>
         <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${column.color}`}>
           {column.cards.length}
         </span>
@@ -262,7 +358,15 @@ function KanbanColumn({ column, onDelete, onMove, role }: any) {
       
       <div className="flex-1 p-3 flex flex-col gap-3 min-h-[150px]">
           {column.cards.map((card: any) => (
-            <KanbanCard key={card.id} card={card} onDelete={onDelete} onMove={onMove} role={role} />
+            <KanbanCard 
+              key={card.id} 
+              card={card} 
+              onDelete={onDelete} 
+              onMove={onMove} 
+              role={role} 
+              isSelected={selectedLeads.includes(card.id)}
+              onToggle={() => onToggleSelect(card.id)}
+            />
           ))}
           {column.cards.length === 0 && (
              <div className="flex-1 rounded-sm border-2 border-dashed border-white/5 flex items-center justify-center text-sm text-gray-600">
@@ -274,13 +378,24 @@ function KanbanColumn({ column, onDelete, onMove, role }: any) {
   );
 }
 
-function KanbanCard({ card, onDelete, onMove, role }: any) {
+function KanbanCard({ card, onDelete, onMove, role, isSelected, onToggle }: any) {
   return (
     <div 
-      className="p-4 rounded-xl bg-[#1A1A1A] border border-white/5 shadow-lg group hover:border-white/10 transition-colors relative"
+      className={`p-4 rounded-xl bg-[#1A1A1A] border shadow-lg group hover:border-white/10 transition-colors relative cursor-pointer ${isSelected ? 'border-orus-gold/50 bg-orus-gold/5' : 'border-white/5'}`}
+      onClick={onToggle}
     >
-      <div className="flex justify-between items-start mb-3">
-        <div className="flex items-center gap-3 w-full min-w-0">
+      <div className="flex justify-between items-start mb-3 mt-1">
+        <div className="absolute top-3 left-3">
+          <div onClick={(e) => e.stopPropagation()}>
+            <input 
+              type="checkbox" 
+              checked={isSelected}
+              onChange={onToggle}
+              className="w-4 h-4 rounded border-gray-600 bg-white/5 text-orus-gold focus:ring-orus-gold focus:ring-offset-gray-900"
+            />
+          </div>
+        </div>
+        <div className="flex items-center gap-3 w-full min-w-0 pl-6">
           <div className="shrink-0 w-10 h-10 rounded-lg bg-black/50 flex items-center justify-center font-display font-bold text-gray-400">
             {card.company?.charAt(0) || 'L'}
           </div>
