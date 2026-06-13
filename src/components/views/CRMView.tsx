@@ -273,63 +273,64 @@ export function CRMView() {
           ))}
       </div>
 
-      <AnimatePresence>
-        {leadToDelete && createPortal(
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-            <motion.div 
-               initial={{ opacity: 0, scale: 0.95 }}
-               animate={{ opacity: 1, scale: 1 }}
-               exit={{ opacity: 0, scale: 0.95 }}
-               className="bg-[#111] border border-orus-gold/30 rounded-2xl p-6 max-w-sm w-full shadow-2xl relative"
-            >
-              <h3 className="text-xl font-display font-medium text-white mb-2">
-                {leadToDelete === 'mass' ? `Excluir ${selectedLeads.length} leads` : 'Excluir Lead'}
-              </h3>
-              <p className="text-gray-400 text-sm mb-6">
-                {leadToDelete === 'mass' 
-                  ? 'Tem certeza que deseja excluir os leads selecionados? Esta ação não pode ser desfeita.' 
-                  : 'Tem certeza que deseja excluir este lead? Esta ação não pode ser desfeita.'}
-              </p>
-              <div className="flex justify-end gap-3">
-                <button onClick={() => setLeadToDelete(null)} className="px-4 py-2 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 transition-colors">Cancelar</button>
-                <button onClick={confirmDelete} className="px-4 py-2 rounded-lg text-sm font-medium bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20 transition-colors">Confirmar Exclusão</button>
-              </div>
-            </motion.div>
-          </div>,
-          document.body
-        )}
+      {createPortal(
+        <AnimatePresence>
+          {leadToDelete && (
+            <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+              <motion.div 
+                 initial={{ opacity: 0, scale: 0.95 }}
+                 animate={{ opacity: 1, scale: 1 }}
+                 exit={{ opacity: 0, scale: 0.95 }}
+                 className="bg-[#111] border border-orus-gold/30 rounded-2xl p-6 max-w-sm w-full shadow-2xl relative"
+              >
+                <h3 className="text-xl font-display font-medium text-white mb-2">
+                  {leadToDelete === 'mass' ? `Excluir ${selectedLeads.length} leads` : 'Excluir Lead'}
+                </h3>
+                <p className="text-gray-400 text-sm mb-6">
+                  {leadToDelete === 'mass' 
+                    ? 'Tem certeza que deseja excluir os leads selecionados? Esta ação não pode ser desfeita.' 
+                    : 'Tem certeza que deseja excluir este lead? Esta ação não pode ser desfeita.'}
+                </p>
+                <div className="flex justify-end gap-3">
+                  <button onClick={() => setLeadToDelete(null)} className="px-4 py-2 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 transition-colors">Cancelar</button>
+                  <button onClick={confirmDelete} className="px-4 py-2 rounded-lg text-sm font-medium bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20 transition-colors">Confirmar Exclusão</button>
+                </div>
+              </motion.div>
+            </div>
+          )}
 
-        {showWebhookModal && createPortal(
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-            <motion.div 
-               initial={{ opacity: 0, scale: 0.95 }}
-               animate={{ opacity: 1, scale: 1 }}
-               exit={{ opacity: 0, scale: 0.95 }}
-               className="bg-[#111] border border-orus-gold/30 rounded-2xl p-6 max-w-md w-full shadow-2xl relative"
-            >
-              <h3 className="text-xl font-display font-medium text-white mb-2">Integração n8n / Sheets</h3>
-              <p className="text-gray-400 text-sm mb-6">Insira a URL do Webhook do seu fluxo n8n. Quando configurado, a sincronização enviará os dados em tempo real para o webhook. Se deixado em branco, a sincronização baixará um arquivo CSV formatado.</p>
-              
-              <div className="mb-6">
-                <label className="block text-xs font-medium text-gray-400 mb-2 uppercase tracking-widest">Webhook URL</label>
-                <input 
-                  type="url"
-                  placeholder="https://seu-n8n.com/webhook/..."
-                  value={tempWebhookUrl}
-                  onChange={e => setTempWebhookUrl(e.target.value)}
-                  className="w-full bg-[#1A1A1A] border border-white/10 rounded-sm px-4 py-3 text-white focus:outline-none focus:border-orus-gold/50 transition-colors"
-                />
-              </div>
+          {showWebhookModal && (
+            <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+              <motion.div 
+                 initial={{ opacity: 0, scale: 0.95 }}
+                 animate={{ opacity: 1, scale: 1 }}
+                 exit={{ opacity: 0, scale: 0.95 }}
+                 className="bg-[#111] border border-orus-gold/30 rounded-2xl p-6 max-w-md w-full shadow-2xl relative"
+              >
+                <h3 className="text-xl font-display font-medium text-white mb-2">Integração n8n / Sheets</h3>
+                <p className="text-gray-400 text-sm mb-6">Insira a URL do Webhook do seu fluxo n8n. Quando configurado, a sincronização enviará os dados em tempo real para o webhook. Se deixado em branco, a sincronização baixará um arquivo CSV formatado.</p>
+                
+                <div className="mb-6">
+                  <label className="block text-xs font-medium text-gray-400 mb-2 uppercase tracking-widest">Webhook URL</label>
+                  <input 
+                    type="url"
+                    placeholder="https://seu-n8n.com/webhook/..."
+                    value={tempWebhookUrl}
+                    onChange={e => setTempWebhookUrl(e.target.value)}
+                    className="w-full bg-[#1A1A1A] border border-white/10 rounded-sm px-4 py-3 text-white focus:outline-none focus:border-orus-gold/50 transition-colors"
+                  />
+                </div>
 
-              <div className="flex justify-end gap-3">
-                <button onClick={() => setShowWebhookModal(false)} className="px-4 py-2 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 transition-colors">Cancelar</button>
-                <button onClick={saveWebhook} className="px-4 py-2 rounded-lg text-sm font-medium bg-orus-gold/10 text-orus-gold hover:bg-orus-gold/20 border border-orus-gold/20 transition-colors">Salvar Configurações</button>
-              </div>
-            </motion.div>
-          </div>,
-          document.body
-        )}
-      </AnimatePresence>
+                <div className="flex justify-end gap-3">
+                  <button onClick={() => setShowWebhookModal(false)} className="px-4 py-2 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 transition-colors">Cancelar</button>
+                  <button onClick={saveWebhook} className="px-4 py-2 rounded-lg text-sm font-medium bg-orus-gold/10 text-orus-gold hover:bg-orus-gold/20 border border-orus-gold/20 transition-colors">Salvar Configurações</button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </div>
   );
 }
